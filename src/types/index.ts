@@ -15,7 +15,7 @@ export interface Student {
   gender: string;
   batchNo: string;
   vendor: string;
-  bookedBy: string;
+  bookedBy?: string;
   courseType: string;
   assignmentStatus: 'pending' | 'complete';
   assignmentDate: string;
@@ -32,33 +32,28 @@ export interface Student {
 export interface Course {
   id: string;
   title: string;
-  description: string;
-  price: number;
-  duration: string;
-  instructor: string;
-  category: string;
-  status: 'active' | 'inactive';
-  enrolledStudents: number;
-  maxCapacity: number;
-  // Extended fields
   courseCode: string;
   assignmentDuration: number;
-  published: boolean;
+  status: 'active' | 'inactive';
 }
 
 export interface Batch {
   id: string;
+  _id?: string;
   name: string;
   courseId: string;
   courseName: string;
   startDate: string;
   endDate: string;
+  startingDate: string;
+  endingDate: string;
   instructor: string;
   students: number;
   maxCapacity: number;
   status: 'upcoming' | 'active' | 'completed';
   // Extended fields
   batchNo: string;
+  subjectCourse: string;
   publishedStatus: boolean;
 }
 
@@ -99,14 +94,7 @@ export interface Vendor {
 export interface Location {
   id: string;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  capacity: number;
-  facilities: string[];
-  status: 'active' | 'inactive';
-  // Extended fields
+  locationName: string;
   addressLine1: string;
   addressLine2: string;
   publishStatus: 'published' | 'draft';

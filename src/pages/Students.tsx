@@ -1,51 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import StudentAdmissionForm from '../components/forms/StudentAdmissionForm';
 import { Student } from '../types';
 import { Plus, Search, Filter, Download, Eye, Edit, Trash2 } from 'lucide-react';
+import api from '../services/api';
 
 export default function Students() {
-  const [students, setStudents] = useState<Student[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@email.com',
-      phone: '+1 (555) 123-4567',
-      location: 'New York',
-      enrollmentDate: '2024-01-15',
-      status: 'active',
-      courses: ['React Fundamentals', 'JavaScript Advanced'],
-      totalPaid: 1200,
-    },
-    {
-      id: '2',
-      name: 'Alice Smith',
-      email: 'alice.smith@email.com',
-      phone: '+1 (555) 234-5678',
-      location: 'Los Angeles',
-      enrollmentDate: '2024-01-20',
-      status: 'active',
-      courses: ['Python for Beginners', 'Data Science Basics'],
-      totalPaid: 800,
-    },
-    {
-      id: '3',
-      name: 'Michael Brown',
-      email: 'michael.brown@email.com',
-      phone: '+1 (555) 345-6789',
-      location: 'Chicago',
-      enrollmentDate: '2024-02-01',
-      status: 'graduated',
-      courses: ['UI/UX Design'],
-      totalPaid: 600,
-    },
-  ]);
-
+  const [students, setStudents] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  // Fetch students from API
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/students');
+      setStudents(response.data);
+    } catch (err) {
+      console.error('Error fetching students:', err);
+      setError('Failed to fetch students');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,19 +42,65 @@ export default function Students() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddStudent = (studentData: Omit<Student, 'id'>) => {
-    const newStudent: Student = {
-      ...studentData,
-      id: Date.now().toString(),
-    };
-    setStudents(prev => [...prev, newStudent]);
-    setIsModalOpen(false);
+  const handleAddStudent = async (studentData: Omit<Student, 'id'>) => {
+    try {
+      setMessage('');
+      setError('');
+      await api.post('/students', studentData);
+      setMessage('Student added successfully!');
+      fetchStudents(); // Refresh the list
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to add student');
+    }
   };
 
-  const handleDeleteStudent = (id: string) => {
-    if (confirm('Are you sure you want to delete this student?')) {
-      setStudents(prev => prev.filter(student => student.id !== id));
+  const handleEditStudent = async (studentData: Omit<Student, 'id'>) => {
+    try {
+      setMessage('');
+      setError('');
+      if (editingStudent) {
+        await api.patch(`/students/${editingStudent.id}`, studentData);
+        setMessage('Student updated successfully!');
+        fetchStudents(); // Refresh the list
+        setIsModalOpen(false);
+        setEditingStudent(null);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update student');
     }
+  };
+
+  const handleDeleteStudent = async (id: string) => {
+    if (confirm('Are you sure you want to delete this student?')) {
+      try {
+        setMessage('');
+        setError('');
+        await api.delete(`/students/${id}`);
+        setMessage('Student deleted successfully!');
+        fetchStudents(); // Refresh the list
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to delete student');
+      }
+    }
+  };
+
+  const openModal = (student?: Student) => {
+    if (student) {
+      setEditingStudent(student);
+    } else {
+      setEditingStudent(null);
+    }
+    setIsModalOpen(true);
+    setMessage('');
+    setError('');
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingStudent(null);
+    setMessage('');
+    setError('');
   };
 
   const getStatusBadge = (status: Student['status']) => {
@@ -78,6 +112,14 @@ export default function Students() {
     return `px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`;
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading students...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -85,11 +127,24 @@ export default function Students() {
           <h1 className="text-3xl font-bold text-gray-900">Students</h1>
           <p className="text-gray-600 mt-2">Manage student enrollments and track their progress</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>
+        <Button onClick={() => openModal()}>
           <Plus className="h-4 w-4 mr-2" />
           Add Student
         </Button>
       </div>
+
+      {/* Messages */}
+      {message && (
+        <div className="p-4 bg-green-100 text-green-700 rounded-md">
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
 
       {/* Filters and Search */}
       <Card>
@@ -191,7 +246,7 @@ export default function Students() {
                       <div className="flex flex-wrap gap-1">
                         {student.courses.slice(0, 2).map((course, index) => (
                           <span
-                            key={index}
+                            key={`${student.id}-course-${index}`}
                             className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full"
                           >
                             {course}
@@ -206,23 +261,23 @@ export default function Students() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={getStatusBadge(student.status)}>
-                        {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                        {student.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ${student.totalPaid.toLocaleString()}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ${student.totalPaid}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div className="flex items-center justify-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900 transition-colors">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="text-green-600 hover:text-green-900 transition-colors">
+                        <button
+                          onClick={() => openModal(student)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteStudent(student.id)}
-                          className="text-red-600 hover:text-red-900 transition-colors"
+                          className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -233,25 +288,19 @@ export default function Students() {
               </tbody>
             </table>
           </div>
-          
-          {filteredStudents.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No students found matching your criteria.</p>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Add Student Modal */}
+      {/* Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Student Admission Form"
-        size="xl"
+        onClose={closeModal}
+        title={editingStudent ? 'Edit Student' : 'Add New Student'}
       >
         <StudentAdmissionForm
-          onSubmit={handleAddStudent}
-          onCancel={() => setIsModalOpen(false)}
+          onSubmit={editingStudent ? handleEditStudent : handleAddStudent}
+          onCancel={closeModal}
+          initialData={editingStudent}
         />
       </Modal>
     </div>

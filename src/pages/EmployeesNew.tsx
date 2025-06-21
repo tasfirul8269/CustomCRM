@@ -56,8 +56,7 @@ export default function Employees() {
       setMessage('');
       setError('');
       if (editingEmployee) {
-        const employeeId = editingEmployee.id || (editingEmployee as any)._id;
-        await api.patch(`/employees/${employeeId}`, employeeData);
+        await api.patch(`/employees/${editingEmployee.id}`, employeeData);
         setMessage('Employee updated successfully!');
         fetchEmployees(); // Refresh the list
         setIsModalOpen(false);
@@ -192,13 +191,13 @@ export default function Employees() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {employees.map((employee, index) => (
-                    <tr key={employee.id || (employee as any)._id || `employee-${index}`}>
+                  {employees.map((employee) => (
+                    <tr key={employee.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                           {employee.photo ? (
                             <img 
-                              src={employee.photo} 
+                              src={URL.createObjectURL(employee.photo)} 
                               alt={employee.fullName} 
                               className="h-full w-full object-cover"
                             />
@@ -239,7 +238,7 @@ export default function Employees() {
                           <Edit className="h-4 w-4 inline" />
                         </button>
                         <button 
-                          onClick={() => handleDeleteEmployee(employee.id || (employee as any)._id)}
+                          onClick={() => handleDeleteEmployee(employee.id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 className="h-4 w-4 inline" />
@@ -260,13 +259,13 @@ export default function Employees() {
         onClose={closeModal}
         title={editingEmployee ? 'Edit Employee' : 'Add New Employee'}
       >
-              <EmployeeForm
+        <EmployeeForm
           onSubmit={editingEmployee ? handleEditEmployee : handleAddEmployee}
           onCancel={closeModal}
           isLoading={isSubmitting}
-          initialData={editingEmployee || undefined}
-              />
+          initialData={editingEmployee}
+        />
       </Modal>
     </div>
   );
-}
+} 

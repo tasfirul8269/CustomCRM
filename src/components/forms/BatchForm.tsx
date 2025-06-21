@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
+import { Batch } from '../../types/batch';
+import { Course } from '../../types';
+import api from '../../services/api';
 
 interface BatchFormData {
   batchNo: string;
@@ -12,9 +15,10 @@ interface BatchFormData {
 interface BatchFormProps {
   onSubmit: (data: BatchFormData) => void;
   onCancel: () => void;
+  initialData?: Batch | null;
 }
 
-export default function BatchForm({ onSubmit, onCancel }: BatchFormProps) {
+export default function BatchForm({ onSubmit, onCancel, initialData }: BatchFormProps) {
   const [formData, setFormData] = useState<BatchFormData>({
     batchNo: '',
     subjectCourse: '',
@@ -24,6 +28,52 @@ export default function BatchForm({ onSubmit, onCancel }: BatchFormProps) {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+
+  // Fetch courses from API
+  const fetchCourses = async () => {
+    try {
+      setLoadingCourses(true);
+      const response = await api.get('/courses');
+      setCourses(response.data);
+    } catch (err) {
+      console.error('Error fetching courses:', err);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
+  // Initialize form with initial data if editing
+  useEffect(() => {
+    if (initialData) {
+      // Convert ISO date strings to yyyy-MM-dd format for the form
+      const formatDateForInput = (dateString: string) => {
+        if (!dateString) return '';
+        try {
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) return '';
+          return date.toISOString().split('T')[0];
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return '';
+        }
+      };
+
+      setFormData({
+        batchNo: initialData.batchNo || '',
+        subjectCourse: initialData.subjectCourse || '',
+        startingDate: formatDateForInput(initialData.startingDate),
+        endingDate: formatDateForInput(initialData.endingDate),
+        publishedStatus: initialData.publishedStatus || true,
+      });
+    }
+  }, [initialData]);
+
+  // Fetch courses on component mount
+  useEffect(() => {
+    fetchCourses();
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -49,17 +99,6 @@ export default function BatchForm({ onSubmit, onCancel }: BatchFormProps) {
       onSubmit(formData);
     }
   };
-
-  const availableCourses = [
-    'React Fundamentals',
-    'JavaScript Advanced',
-    'Python for Beginners',
-    'UI/UX Design',
-    'Data Science Basics',
-    'Node.js Backend',
-    'Digital Marketing',
-    'Machine Learning',
-  ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -90,10 +129,13 @@ export default function BatchForm({ onSubmit, onCancel }: BatchFormProps) {
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               errors.subjectCourse ? 'border-red-500' : 'border-gray-300'
             }`}
+            disabled={loadingCourses}
           >
-            <option value="">Select course</option>
-            {availableCourses.map((course) => (
-              <option key={course} value={course}>{course}</option>
+            <option value="">{loadingCourses ? 'Loading courses...' : 'Select course'}</option>
+            {courses.map((course, index) => (
+              <option key={course.id || `course-${index}`} value={course.title}>
+                {course.title} ({course.courseCode})
+              </option>
             ))}
           </select>
           {errors.subjectCourse && <p className="text-red-500 text-sm mt-1">{errors.subjectCourse}</p>}
@@ -163,7 +205,7 @@ export default function BatchForm({ onSubmit, onCancel }: BatchFormProps) {
           Cancel
         </Button>
         <Button type="submit">
-          Add Batch
+          {initialData ? 'Update Batch' : 'Add Batch'}
         </Button>
       </div>
     </form>

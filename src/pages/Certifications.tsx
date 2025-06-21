@@ -1,75 +1,105 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Search, Filter, Plus, Download, Mail, Printer, MoreVertical, Check, X } from 'lucide-react';
+import { Search, Filter, Plus, Download, Mail, Printer, MoreVertical, Check, X, Edit, Trash2 } from 'lucide-react';
+import Modal from '../components/ui/Modal';
 import CertificateForm from '../components/forms/CertificateForm';
 import { Certificate } from '../types/certificate';
+import api from '../services/api';
 
 export default function Certifications() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [certificates, setCertificates] = useState<Certificate[]>([
-    {
-      id: '1',
-      certificateNumber: 'CERT-2023-001',
-      studentName: 'John Doe',
-      course: 'Web Development Bootcamp',
-      issueDate: '2023-06-15',
-      expiryDate: '2025-06-15',
-      status: 'issued',
-      deliveryMethod: 'email',
-      recipientEmail: 'john.doe@example.com',
-      createdAt: '2023-06-10',
-      updatedAt: '2023-06-10'
-    },
-    {
-      id: '2',
-      certificateNumber: 'CERT-2023-002',
-      studentName: 'Jane Smith',
-      course: 'Data Science Fundamentals',
-      issueDate: '2023-06-20',
-      expiryDate: '2025-06-20',
-      status: 'dispatched',
-      deliveryMethod: 'post',
-      trackingNumber: 'TRK123456789',
-      createdAt: '2023-06-18',
-      updatedAt: '2023-06-20'
-    },
-    {
-      id: '3',
-      certificateNumber: 'CERT-2023-003',
-      studentName: 'Alex Johnson',
-      course: 'UI/UX Design',
-      issueDate: '2023-06-25',
-      status: 'delivered',
-      deliveryMethod: 'download',
-      createdAt: '2023-06-22',
-      updatedAt: '2023-06-25'
-    },
-  ]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCertificate, setEditingCertificate] = useState<Certificate | null>(null);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  // Fetch certificates from API
+  const fetchCertificates = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/certificates');
+      setCertificates(response.data);
+    } catch (err) {
+      console.error('Error fetching certificates:', err);
+      setError('Failed to fetch certificates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCertificates();
+  }, []);
 
   const filteredCertificates = certificates.filter(cert => 
-    cert.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (cert.studentName && cert.studentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     cert.certificateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cert.course.toLowerCase().includes(searchTerm.toLowerCase())
+    (cert.courseName && cert.courseName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleAddCertificate = (data: any) => {
-    const newCertificate: Certificate = {
-      id: (certificates.length + 1).toString(),
-      certificateNumber: `CERT-${new Date().getFullYear()}-${String(certificates.length + 1).padStart(3, '0')}`,
-      studentName: data.name,
-      course: data.courseName,
-      issueDate: new Date().toISOString().split('T')[0],
-      status: 'issued',
-      deliveryMethod: 'email',
-      recipientEmail: '',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0]
-    };
-    
-    setCertificates([...certificates, newCertificate]);
-    setShowAddForm(false);
+  const handleAddCertificate = async (certificateData: any) => {
+    try {
+      setMessage('');
+      setError('');
+      await api.post('/certificates', certificateData);
+      setMessage('Certificate added successfully!');
+      fetchCertificates(); // Refresh the list
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to add certificate');
+    }
+  };
+
+  const handleEditCertificate = async (certificateData: any) => {
+    try {
+      setMessage('');
+      setError('');
+      if (editingCertificate) {
+        const certificateId = editingCertificate.id || (editingCertificate as any)._id;
+        await api.patch(`/certificates/${certificateId}`, certificateData);
+        setMessage('Certificate updated successfully!');
+        fetchCertificates(); // Refresh the list
+        setIsModalOpen(false);
+        setEditingCertificate(null);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update certificate');
+    }
+  };
+
+  const handleDeleteCertificate = async (id: string) => {
+    if (confirm('Are you sure you want to delete this certificate?')) {
+      try {
+        setMessage('');
+        setError('');
+        await api.delete(`/certificates/${id}`);
+        setMessage('Certificate deleted successfully!');
+        fetchCertificates(); // Refresh the list
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to delete certificate');
+      }
+    }
+  };
+
+  const openModal = (certificate?: Certificate) => {
+    if (certificate) {
+      setEditingCertificate(certificate);
+    } else {
+      setEditingCertificate(null);
+    }
+    setIsModalOpen(true);
+    setMessage('');
+    setError('');
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingCertificate(null);
+    setMessage('');
+    setError('');
   };
 
   const getStatusBadge = (status: Certificate['status']) => {
@@ -77,23 +107,17 @@ export default function Certifications() {
       issued: 'bg-blue-100 text-blue-800',
       pending: 'bg-yellow-100 text-yellow-800',
       dispatched: 'bg-purple-100 text-purple-800',
-      delivered: 'bg-green-100 text-green-800'
     };
     return `px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`;
   };
 
-  const getDeliveryIcon = (method: Certificate['deliveryMethod']) => {
-    switch (method) {
-      case 'email':
-        return <Mail className="h-4 w-4 text-blue-500" />;
-      case 'post':
-        return <Printer className="h-4 w-4 text-green-500" />;
-      case 'download':
-        return <Download className="h-4 w-4 text-purple-500" />;
-      default:
-        return <Mail className="h-4 w-4 text-gray-500" />;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading certificates...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -107,12 +131,25 @@ export default function Certifications() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button onClick={() => setShowAddForm(true)}>
+          <Button onClick={() => openModal()}>
             <Plus className="h-4 w-4 mr-2" />
             Issue Certificate
           </Button>
         </div>
       </div>
+
+      {/* Messages */}
+      {message && (
+        <div className="p-4 bg-green-100 text-green-700 rounded-md">
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
 
       {/* Search and Filter */}
       <Card>
@@ -170,9 +207,6 @@ export default function Certifications() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Delivery
-                  </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -188,7 +222,7 @@ export default function Certifications() {
                       {cert.studentName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {cert.course}
+                      {cert.courseName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(cert.issueDate).toLocaleDateString()}
@@ -198,19 +232,19 @@ export default function Certifications() {
                         {cert.status.charAt(0).toUpperCase() + cert.status.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center">
-                        {getDeliveryIcon(cert.deliveryMethod)}
-                        <span className="ml-2 capitalize">{cert.deliveryMethod}</span>
-                      </div>
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">
-                          <Download className="h-4 w-4" />
+                        <button 
+                          onClick={() => openModal(cert)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <Edit className="h-4 w-4" />
                         </button>
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <MoreVertical className="h-4 w-4" />
+                        <button 
+                          onClick={() => handleDeleteCertificate(cert.id || (cert as any)._id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -223,28 +257,17 @@ export default function Certifications() {
       </Card>
 
       {/* Add Certificate Modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Issue New Certificate</h2>
-                <button 
-                  onClick={() => setShowAddForm(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <span className="sr-only">Close</span>
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <CertificateForm 
-                onSubmit={handleAddCertificate}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={editingCertificate ? 'Edit Certificate' : 'Issue New Certificate'}
+      >
+        <CertificateForm 
+          onSubmit={editingCertificate ? handleEditCertificate : handleAddCertificate}
+          onCancel={closeModal}
+          initialData={editingCertificate || undefined}
+        />
+      </Modal>
     </div>
   );
 }

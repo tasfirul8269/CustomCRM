@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
+import { Location } from '../../types';
 
 interface LocationFormData {
   locationName: string;
@@ -11,9 +12,10 @@ interface LocationFormData {
 interface LocationFormProps {
   onSubmit: (data: LocationFormData) => void;
   onCancel: () => void;
+  initialData?: Location | null;
 }
 
-export default function LocationForm({ onSubmit, onCancel }: LocationFormProps) {
+export default function LocationForm({ onSubmit, onCancel, initialData }: LocationFormProps) {
   const [formData, setFormData] = useState<LocationFormData>({
     locationName: '',
     addressLine1: '',
@@ -22,6 +24,18 @@ export default function LocationForm({ onSubmit, onCancel }: LocationFormProps) 
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Initialize form with initial data if provided
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        locationName: initialData.locationName || initialData.name || '',
+        addressLine1: initialData.addressLine1 || '',
+        addressLine2: initialData.addressLine2 || '',
+        publishStatus: initialData.publishStatus || 'published',
+      });
+    }
+  }, [initialData]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -106,7 +120,7 @@ export default function LocationForm({ onSubmit, onCancel }: LocationFormProps) 
           Cancel
         </Button>
         <Button type="submit">
-          Add Location
+          {initialData ? 'Update Location' : 'Add Location'}
         </Button>
       </div>
     </form>

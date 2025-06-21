@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
 import { Student } from '../../types';
 
 interface StudentAdmissionFormProps {
   onSubmit: (student: Omit<Student, 'id'>) => void;
   onCancel: () => void;
+  initialData?: Student | null;
 }
 
-export default function StudentAdmissionForm({ onSubmit, onCancel }: StudentAdmissionFormProps) {
+export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }: StudentAdmissionFormProps) {
   const [formData, setFormData] = useState({
     // Basic Information
     admissionDate: new Date().toISOString().split('T')[0],
@@ -18,7 +19,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel }: StudentAdmi
     city: '',
     postcode: '',
     gender: '',
-    status: 'active' as 'active' | 'inactive',
+    status: 'active' as 'active' | 'inactive' | 'graduated',
     batchNo: '',
     vendor: '',
     location: '',
@@ -40,6 +41,39 @@ export default function StudentAdmissionForm({ onSubmit, onCancel }: StudentAdmi
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Initialize form with initial data if editing
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        admissionDate: initialData.enrollmentDate || new Date().toISOString().split('T')[0],
+        name: initialData.name || '',
+        phone: initialData.phone || '',
+        email: initialData.email || '',
+        address: initialData.address || '',
+        city: initialData.city || '',
+        postcode: initialData.postcode || '',
+        gender: initialData.gender || '',
+        status: initialData.status || 'active',
+        batchNo: initialData.batchNo || '',
+        vendor: initialData.vendor || '',
+        location: initialData.location || '',
+        bookedBy: initialData.bookedBy || '',
+        courseType: initialData.courseType || '',
+        assignmentStatus: initialData.assignmentStatus || 'pending',
+        assignmentDate: initialData.assignmentDate || '',
+        note: initialData.note || '',
+        admissionType: initialData.admissionType || '',
+        paymentSlots: initialData.paymentSlots || '',
+        courseFee: initialData.courseFee || 0,
+        discount: initialData.discount || 0,
+        totalPaid: initialData.totalPaid || 0,
+        received: initialData.received || 0,
+        refund: initialData.refund || 0,
+        balanceDue: initialData.balanceDue || 0,
+      });
+    }
+  }, [initialData]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -82,7 +116,6 @@ export default function StudentAdmissionForm({ onSubmit, onCancel }: StudentAdmi
         gender: formData.gender,
         batchNo: formData.batchNo,
         vendor: formData.vendor,
-        bookedBy: formData.bookedBy,
         courseType: formData.courseType,
         assignmentStatus: formData.assignmentStatus,
         assignmentDate: formData.assignmentDate,
@@ -247,11 +280,12 @@ export default function StudentAdmissionForm({ onSubmit, onCancel }: StudentAdmi
             </label>
             <select
               value={formData.status}
-              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' | 'graduated' }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+              <option value="graduated">Graduated</option>
             </select>
           </div>
         </div>
@@ -531,7 +565,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel }: StudentAdmi
           Cancel
         </Button>
         <Button type="submit">
-          Add Student
+          {initialData ? 'Update Student' : 'Add Student'}
         </Button>
       </div>
     </form>

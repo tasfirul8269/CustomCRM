@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
 import { Upload } from 'lucide-react';
+import { Vendor } from '../../types/vendor';
 
 interface VendorFormData {
   logo: File | null;
@@ -21,9 +22,10 @@ interface VendorFormData {
 interface VendorFormProps {
   onSubmit: (data: VendorFormData) => void;
   onCancel: () => void;
+  initialData?: Vendor;
 }
 
-export default function VendorForm({ onSubmit, onCancel }: VendorFormProps) {
+export default function VendorForm({ onSubmit, onCancel, initialData }: VendorFormProps) {
   const [formData, setFormData] = useState<VendorFormData>({
     logo: null,
     vendorName: '',
@@ -42,11 +44,32 @@ export default function VendorForm({ onSubmit, onCancel }: VendorFormProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        logo: null,
+        vendorName: initialData.name,
+        fax: initialData.fax,
+        webAddress: initialData.webAddress,
+        addressLine1: initialData.addressLine1,
+        addressLine2: initialData.addressLine2,
+        registrationNumber: initialData.registrationNumber,
+        phone: initialData.phone,
+        email: initialData.email,
+        invoicePrefix: initialData.invoicePrefix,
+        published: initialData.published,
+        approvedBy: initialData.approvedBy,
+        accountInfo: initialData.accountInfo,
+      });
+    }
+  }, [initialData]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.vendorName.trim()) newErrors.vendorName = 'Vendor name is required';
-    if (!formData.logo) newErrors.logo = 'Logo is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    if (!initialData?.logo && !formData.logo) newErrors.logo = 'Logo is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -205,6 +228,7 @@ export default function VendorForm({ onSubmit, onCancel }: VendorFormProps) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter email address"
           />
+          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
         </div>
 
         <div>

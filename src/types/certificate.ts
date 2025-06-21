@@ -1,16 +1,15 @@
 export interface Certificate {
   id: string;
-  certificateNumber: string;
-  studentName: string;
-  course: string;
+  _id?: string;
+  student: string; // ObjectId reference
+  studentName?: string; // For display purposes
+  course: string; // ObjectId reference
+  courseName?: string; // For display purposes
   issueDate: string;
-  expiryDate?: string;
-  status: 'issued' | 'pending' | 'dispatched' | 'delivered';
-  dispatchDate?: string;
-  deliveryMethod: 'email' | 'post' | 'download';
-  recipientEmail?: string;
-  trackingNumber?: string;
-  notes?: string;
+  certificateNumber: string;
+  status: 'pending' | 'issued' | 'dispatched';
+  sentDate?: string;
+  doorNumber?: string;
   createdAt: string;
   updatedAt: string;
 }

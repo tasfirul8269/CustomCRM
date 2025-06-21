@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
+import { Course } from '../../types';
 
 interface CourseFormData {
   courseTitle: string;
@@ -11,9 +12,10 @@ interface CourseFormData {
 interface CourseFormProps {
   onSubmit: (data: CourseFormData) => void;
   onCancel: () => void;
+  initialData?: Course | null;
 }
 
-export default function CourseForm({ onSubmit, onCancel }: CourseFormProps) {
+export default function CourseForm({ onSubmit, onCancel, initialData }: CourseFormProps) {
   const [formData, setFormData] = useState<CourseFormData>({
     courseTitle: '',
     courseCode: '',
@@ -22,6 +24,18 @@ export default function CourseForm({ onSubmit, onCancel }: CourseFormProps) {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Initialize form with initial data if editing
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        courseTitle: initialData.title || '',
+        courseCode: initialData.id || '',
+        assignmentDuration: 30, // Default value
+        published: initialData.status === 'active',
+      });
+    }
+  }, [initialData]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -131,7 +145,7 @@ export default function CourseForm({ onSubmit, onCancel }: CourseFormProps) {
           Cancel
         </Button>
         <Button type="submit">
-          Save Course
+          {initialData ? 'Update Course' : 'Save Course'}
         </Button>
       </div>
     </form>

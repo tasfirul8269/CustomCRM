@@ -1,6 +1,7 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { Employee } from '../../types/employee';
 import Button from '../ui/Button';
+import api from '../../services/api';
 
 interface EmployeeFormProps {
   initialData?: Partial<Employee>;
@@ -35,9 +36,33 @@ export default function EmployeeForm({
     note: initialData.note || '',
   });
 
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initialData.photo || null);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(initialData.signature || null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Format dates when initialData changes (for editing)
+  useEffect(() => {
+    if (initialData) {
+      const formatDateForInput = (dateString: string) => {
+        if (!dateString) return '';
+        try {
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) return '';
+          return date.toISOString().split('T')[0];
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return '';
+        }
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        dateOfBirth: formatDateForInput(initialData.dateOfBirth || ''),
+        joiningDate: formatDateForInput(initialData.joiningDate || ''),
+        leavingDate: formatDateForInput(initialData.leavingDate || ''),
+      }));
+    }
+  }, [initialData]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -72,7 +97,8 @@ export default function EmployeeForm({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    if (!formData.photo) newErrors.photo = 'Photo is required';
+    // Photo is only required for new employees
+    if (!initialData?.photo && !formData.photo) newErrors.photo = 'Photo is required';
     if (!formData.email) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
     if (!formData.mobileNumber) newErrors.mobileNumber = 'Mobile number is required';
@@ -81,18 +107,76 @@ export default function EmployeeForm({
     if (!formData.licenseNumber) newErrors.licenseNumber = 'License number is required';
     if (!formData.addressLine1) newErrors.addressLine1 = 'Address line 1 is required';
     if (!formData.joiningDate) newErrors.joiningDate = 'Joining date is required';
-    if (!formData.signature) newErrors.signature = 'Signature is required';
+    // Signature is only required for new employees
+    if (!initialData?.signature && !formData.signature) newErrors.signature = 'Signature is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (!formData.note || formData.note.length < 200) newErrors.note = 'Note must be at least 200 characters';
+    if (!formData.note || formData.note.length < 200) {
+      // Note is only required to be 200 characters for new employees
+      if (!initialData?.note) {
+        newErrors.note = 'Note must be at least 200 characters';
+      }
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData as any);
+      try {
+        // Upload photo if provided
+        let photoUrl = initialData?.photo || '';
+        if (formData.photo && formData.photo instanceof File) {
+          const photoFormData = new FormData();
+          photoFormData.append('image', formData.photo);
+          const photoResponse = await api.post('/upload/image', photoFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          photoUrl = photoResponse.data.url;
+        }
+
+        // Upload signature if provided
+        let signatureUrl = initialData?.signature || '';
+        if (formData.signature && formData.signature instanceof File) {
+          const signatureFormData = new FormData();
+          signatureFormData.append('image', formData.signature);
+          const signatureResponse = await api.post('/upload/image', signatureFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          signatureUrl = signatureResponse.data.url;
+        }
+
+        // Prepare employee data
+        const employeeData = {
+          fullName: formData.fullName,
+          email: formData.email,
+          mobileNumber: formData.mobileNumber,
+          addressLine1: formData.addressLine1,
+          addressLine2: formData.addressLine2,
+          position: formData.position,
+          status: formData.status,
+          dateOfBirth: formData.dateOfBirth,
+          licenseNumber: formData.licenseNumber,
+          joiningDate: formData.joiningDate,
+          leavingDate: formData.leavingDate || undefined,
+          contactNumber: formData.contactNumber,
+          gender: formData.gender,
+          employeeVendor: formData.employeeVendor,
+          note: formData.note,
+          photo: photoUrl,
+          signature: signatureUrl,
+        };
+
+        onSubmit(employeeData as any);
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        // Handle upload error
+      }
     }
   };
 
@@ -122,7 +206,6 @@ export default function EmployeeForm({
                   className="sr-only"
                   accept="image/*"
                   onChange={(e) => handleFileChange(e, 'photo')}
-                  required
                 />
               </div>
             </label>
@@ -332,7 +415,6 @@ export default function EmployeeForm({
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 accept="image/*"
                 onChange={(e) => handleFileChange(e, 'signature')}
-                required
               />
             </label>
           </div>
@@ -430,7 +512,7 @@ export default function EmployeeForm({
         <Button
           type="submit"
           variant="primary"
-          disabled={isLoading || formData.note.length < 200}
+          disabled={isLoading || (!initialData?.note && formData.note.length < 200)}
           className="px-4 py-2"
         >
           {isLoading ? 'Saving...' : 'Save Employee'}

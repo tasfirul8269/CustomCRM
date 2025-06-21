@@ -1,57 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Plus, Search, Filter, Edit, Trash2, Check, X, ExternalLink } from 'lucide-react';
+import Modal from '../components/ui/Modal';
 import VendorForm from '../components/forms/VendorForm';
 import { Vendor } from '../types/vendor';
+import api from '../services/api';
 
 export default function Vendors() {
-  const [vendors, setVendors] = useState<Vendor[]>([{
-    id: '1',
-    name: 'ABC Suppliers',
-    email: 'contact@abcsuppliers.com',
-    phone: '+1 234 567 8901',
-    address: '123 Business St, New York, NY 10001',
-    contactPerson: 'John Smith',
-    status: 'active',
-    registrationDate: '2023-01-15',
-    website: 'https://abcsuppliers.com'
-  }, {
-    id: '2',
-    name: 'XYZ Distributors',
-    email: 'sales@xyzdist.com',
-    phone: '+1 987 654 3210',
-    address: '456 Commerce Ave, Los Angeles, CA 90001',
-    contactPerson: 'Sarah Johnson',
-    status: 'active',
-    registrationDate: '2023-02-20'
-  }]);
-
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddVendorForm, setShowAddVendorForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  // Fetch vendors from API
+  const fetchVendors = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/vendors');
+      setVendors(response.data);
+    } catch (err) {
+      console.error('Error fetching vendors:', err);
+      setError('Failed to fetch vendors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
 
   const filteredVendors = vendors.filter(vendor => 
     vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
+    (vendor.company && vendor.company.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleAddVendor = (data: any) => {
-    // In a real app, you would make an API call here
-    const newVendor: Vendor = {
-      id: (vendors.length + 1).toString(),
-      name: data.vendorName,
-      email: data.email,
-      phone: data.phone,
-      address: `${data.addressLine1}${data.addressLine2 ? `, ${data.addressLine2}` : ''}`,
-      contactPerson: data.contactPerson || 'N/A',
-      status: data.published ? 'active' : 'inactive',
-      registrationDate: new Date().toISOString().split('T')[0],
-      website: data.webAddress || undefined
-    };
-    
-    setVendors([...vendors, newVendor]);
-    setShowAddVendorForm(false);
+  const handleAddVendor = async (vendorData: any) => {
+    try {
+      setMessage('');
+      setError('');
+      // Map vendorName to name for backend compatibility
+      const dataToSend = { ...vendorData };
+      dataToSend.name = vendorData.vendorName;
+      delete dataToSend.vendorName;
+      if (dataToSend.logo instanceof File) {
+        dataToSend.logo = '';
+      }
+      await api.post('/vendors', dataToSend);
+      setMessage('Vendor added successfully!');
+      fetchVendors(); // Refresh the list
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to add vendor');
+    }
+  };
+
+  const handleEditVendor = async (vendorData: any) => {
+    try {
+      setMessage('');
+      setError('');
+      if (editingVendor) {
+        const vendorId = editingVendor.id || (editingVendor as any)._id;
+        await api.patch(`/vendors/${vendorId}`, vendorData);
+        setMessage('Vendor updated successfully!');
+        fetchVendors(); // Refresh the list
+        setIsModalOpen(false);
+        setEditingVendor(null);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update vendor');
+    }
+  };
+
+  const handleDeleteVendor = async (id: string) => {
+    if (confirm('Are you sure you want to delete this vendor?')) {
+      try {
+        setMessage('');
+        setError('');
+        await api.delete(`/vendors/${id}`);
+        setMessage('Vendor deleted successfully!');
+        fetchVendors(); // Refresh the list
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to delete vendor');
+      }
+    }
+  };
+
+  const openModal = (vendor?: Vendor) => {
+    if (vendor) {
+      setEditingVendor(vendor);
+    } else {
+      setEditingVendor(null);
+    }
+    setIsModalOpen(true);
+    setMessage('');
+    setError('');
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingVendor(null);
+    setMessage('');
+    setError('');
   };
 
   const getStatusBadge = (status: Vendor['status']) => {
@@ -62,6 +117,14 @@ export default function Vendors() {
     return `px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`;
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading vendors...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -69,11 +132,24 @@ export default function Vendors() {
           <h1 className="text-3xl font-bold text-gray-900">Vendors</h1>
           <p className="text-gray-600 mt-2">Manage your vendors and their information</p>
         </div>
-        <Button onClick={() => setShowAddVendorForm(true)}>
+        <Button onClick={() => openModal()}>
           <Plus className="h-4 w-4 mr-2" />
           Add Vendor
         </Button>
       </div>
+
+      {/* Messages */}
+      {message && (
+        <div className="p-4 bg-green-100 text-green-700 rounded-md">
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
 
       {/* Search and Filter */}
       <Card>
@@ -121,8 +197,8 @@ export default function Vendors() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredVendors.map((vendor) => (
-                <tr key={vendor.id} className="hover:bg-gray-50">
+              {filteredVendors.map((vendor, index) => (
+                <tr key={vendor.id || (vendor as any)._id || `vendor-${index}`} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div>
@@ -132,7 +208,7 @@ export default function Vendors() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{vendor.contactPerson}</div>
+                    <div className="text-sm text-gray-900">{vendor.company}</div>
                     <div className="text-sm text-gray-500">{vendor.phone}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -141,13 +217,13 @@ export default function Vendors() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(vendor.registrationDate).toLocaleDateString()}
+                    {new Date(vendor.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900 mr-4">
+                    <button className="text-blue-600 hover:text-blue-900 mr-4" onClick={() => openModal(vendor)}>
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button className="text-red-600 hover:text-red-900">
+                    <button className="text-red-600 hover:text-red-900" onClick={() => handleDeleteVendor(vendor.id || (vendor as any)._id)}>
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
@@ -159,30 +235,17 @@ export default function Vendors() {
       </Card>
 
       {/* Add Vendor Form Modal */}
-      {showAddVendorForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Add New Vendor</h2>
-                <button 
-                  onClick={() => setShowAddVendorForm(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
+      >
               <VendorForm 
-                onSubmit={handleAddVendor} 
-                onCancel={() => setShowAddVendorForm(false)} 
+          onSubmit={editingVendor ? handleEditVendor : handleAddVendor}
+          onCancel={closeModal}
+          initialData={editingVendor || undefined}
               />
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

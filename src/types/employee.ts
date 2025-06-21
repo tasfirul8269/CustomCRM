@@ -3,23 +3,24 @@ export type Status = 'Live' | 'Inactive';
 
 export interface Employee {
   id: string;
-  photo: File | null;
+  _id?: string;
+  fullName: string;
   email: string;
   mobileNumber: string;
   addressLine1: string;
-  position?: Position;
-  status?: Status;
-  fullName: string;
+  addressLine2?: string;
+  position: Position;
+  status: Status;
   dateOfBirth: string;
   licenseNumber: string;
-  addressLine2?: string;
   joiningDate: string;
   leavingDate?: string;
-  signature: File | null;
   contactNumber?: string;
   gender: string;
   employeeVendor?: string;
   note: string;
+  photo?: string; // URL to uploaded photo
+  signature?: string; // URL to uploaded signature
   createdAt: string;
   updatedAt: string;
 }

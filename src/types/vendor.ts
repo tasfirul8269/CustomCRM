@@ -1,11 +1,23 @@
 export interface Vendor {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   phone: string;
-  address: string;
-  contactPerson: string;
+  company: string;
+  services: string[];
+  contractValue: number;
   status: 'active' | 'inactive';
-  registrationDate: string;
-  website?: string;
-}
+  logo: string;
+  fax: string;
+  webAddress: string;
+  addressLine1: string;
+  addressLine2: string;
+  registrationNumber: string;
+  invoicePrefix: string;
+  published: boolean;
+  approvedBy: string[];
+  accountInfo: string;
+  createdAt: string;
+  updatedAt: string;
+} 

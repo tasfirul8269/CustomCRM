@@ -1,35 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
+import { Certificate } from '../../types/certificate';
 
 interface CertificateFormData {
-  sentDate: string;
-  name: string;
-  doorNumber: string;
-  courseName: string;
+  student: string;
+  course: string;
+  issueDate: string;
+  certificateNumber: string;
+  status: 'pending' | 'issued' | 'dispatched';
+  sentDate?: string;
+  doorNumber?: string;
 }
 
 interface CertificateFormProps {
   onSubmit: (data: CertificateFormData) => void;
   onCancel: () => void;
+  initialData?: Certificate;
 }
 
-export default function CertificateForm({ onSubmit, onCancel }: CertificateFormProps) {
+export default function CertificateForm({ onSubmit, onCancel, initialData }: CertificateFormProps) {
   const [formData, setFormData] = useState<CertificateFormData>({
-    sentDate: new Date().toISOString().split('T')[0],
-    name: '',
+    student: '',
+    course: '',
+    issueDate: new Date().toISOString().split('T')[0],
+    certificateNumber: '',
+    status: 'pending',
+    sentDate: '',
     doorNumber: '',
-    courseName: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Initialize form with initial data if editing
+  useEffect(() => {
+    if (initialData) {
+      const formatDateForInput = (dateString: string) => {
+        if (!dateString) return '';
+        try {
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) return '';
+          return date.toISOString().split('T')[0];
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return '';
+        }
+      };
+
+      setFormData({
+        student: initialData.student,
+        course: initialData.course,
+        issueDate: formatDateForInput(initialData.issueDate),
+        certificateNumber: initialData.certificateNumber,
+        status: initialData.status,
+        sentDate: formatDateForInput(initialData.sentDate || ''),
+        doorNumber: initialData.doorNumber || '',
+      });
+    }
+  }, [initialData]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.sentDate) newErrors.sentDate = 'Sent date is required';
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.doorNumber.trim()) newErrors.doorNumber = 'Door number is required';
-    if (!formData.courseName) newErrors.courseName = 'Course name is required';
+    if (!formData.student) newErrors.student = 'Student is required';
+    if (!formData.course) newErrors.course = 'Course is required';
+    if (!formData.issueDate) newErrors.issueDate = 'Issue date is required';
+    if (!formData.certificateNumber) newErrors.certificateNumber = 'Certificate number is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -58,7 +93,91 @@ export default function CertificateForm({ onSubmit, onCancel }: CertificateFormP
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Sent Date (DD/MM/YYYY) *
+            Student *
+          </label>
+          <input
+            type="text"
+            value={formData.student}
+            onChange={(e) => setFormData(prev => ({ ...prev, student: e.target.value }))}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.student ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="Enter student name"
+          />
+          {errors.student && <p className="text-red-500 text-sm mt-1">{errors.student}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Course *
+          </label>
+          <select
+            value={formData.course}
+            onChange={(e) => setFormData(prev => ({ ...prev, course: e.target.value }))}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.course ? 'border-red-500' : 'border-gray-300'
+            }`}
+          >
+            <option value="">Select course</option>
+            {availableCourses.map((course) => (
+              <option key={course} value={course}>{course}</option>
+            ))}
+          </select>
+          {errors.course && <p className="text-red-500 text-sm mt-1">{errors.course}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Issue Date (DD/MM/YYYY) *
+          </label>
+          <input
+            type="date"
+            value={formData.issueDate}
+            onChange={(e) => setFormData(prev => ({ ...prev, issueDate: e.target.value }))}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.issueDate ? 'border-red-500' : 'border-gray-300'
+            }`}
+          />
+          {errors.issueDate && <p className="text-red-500 text-sm mt-1">{errors.issueDate}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Certificate Number *
+          </label>
+          <input
+            type="text"
+            value={formData.certificateNumber}
+            onChange={(e) => setFormData(prev => ({ ...prev, certificateNumber: e.target.value }))}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.certificateNumber ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="Enter certificate number"
+          />
+          {errors.certificateNumber && <p className="text-red-500 text-sm mt-1">{errors.certificateNumber}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Status *
+          </label>
+          <select
+            value={formData.status}
+            onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'pending' | 'issued' | 'dispatched' }))}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.status ? 'border-red-500' : 'border-gray-300'
+            }`}
+          >
+            <option value="pending">Pending</option>
+            <option value="issued">Issued</option>
+            <option value="dispatched">Dispatched</option>
+          </select>
+          {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Sent Date (DD/MM/YYYY)
           </label>
           <input
             type="date"
@@ -73,23 +192,7 @@ export default function CertificateForm({ onSubmit, onCancel }: CertificateFormP
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Name *
-          </label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.name ? 'border-red-500' : 'border-gray-300'
-            }`}
-            placeholder="Enter recipient name"
-          />
-          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Door Number (Address) *
+            Door Number (Address)
           </label>
           <input
             type="text"
@@ -101,25 +204,6 @@ export default function CertificateForm({ onSubmit, onCancel }: CertificateFormP
             placeholder="Enter door number/address"
           />
           {errors.doorNumber && <p className="text-red-500 text-sm mt-1">{errors.doorNumber}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Name *
-          </label>
-          <select
-            value={formData.courseName}
-            onChange={(e) => setFormData(prev => ({ ...prev, courseName: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.courseName ? 'border-red-500' : 'border-gray-300'
-            }`}
-          >
-            <option value="">Select course</option>
-            {availableCourses.map((course) => (
-              <option key={course} value={course}>{course}</option>
-            ))}
-          </select>
-          {errors.courseName && <p className="text-red-500 text-sm mt-1">{errors.courseName}</p>}
         </div>
       </div>
 
