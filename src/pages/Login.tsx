@@ -23,16 +23,27 @@ const LoginPage = () => {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
       
-      // Debug logging
-      console.log('Login - Response data:', response.data);
-      console.log('Login - User data:', user);
-      console.log('Login - User permissions:', user?.permissions);
+      if (!token || !user) {
+        throw new Error('Invalid response from server');
+      }
       
+      console.log('Login successful, user:', user);
       login(token, user);
       navigate('/');
-    } catch (err) {
-      setError('Failed to login. Please check your credentials.');
-      console.error(err);
+      
+    } catch (err: any) {
+      console.error('Login error:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        headers: err.response?.headers,
+      });
+      
+      const errorMessage = err.response?.data?.message || 
+                         (err.response?.status === 401 ? 'Invalid email or password' : 
+                         'Failed to connect to the server. Please try again later.');
+      
+      setError(errorMessage);
     }
   };
 
