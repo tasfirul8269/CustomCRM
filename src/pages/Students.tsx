@@ -4,13 +4,15 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import StudentAdmissionForm from '../components/forms/StudentAdmissionForm';
 import { Student } from '../types';
-import { Plus, Search, Filter, Download, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Calendar, MapPin, Phone, Mail, DollarSign, User, BookOpen, FileText, CreditCard } from 'lucide-react';
 import api from '../services/api';
 
 export default function Students() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -96,6 +98,11 @@ export default function Students() {
     setError('');
   };
 
+  const openViewModal = (student: Student) => {
+    setViewingStudent(student);
+    setIsViewModalOpen(true);
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingStudent(null);
@@ -103,11 +110,24 @@ export default function Students() {
     setError('');
   };
 
+  const closeViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewingStudent(null);
+  };
+
   const getStatusBadge = (status: Student['status']) => {
     const styles = {
       active: 'bg-green-100 text-green-800',
       inactive: 'bg-red-100 text-red-800',
       graduated: 'bg-blue-100 text-blue-800',
+    };
+    return `px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`;
+  };
+
+  const getAssignmentStatusBadge = (status: Student['assignmentStatus']) => {
+    const styles = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      complete: 'bg-green-100 text-green-800',
     };
     return `px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`;
   };
@@ -146,7 +166,7 @@ export default function Students() {
         </div>
       )}
 
-      {/* Filters and Search */}
+      {/* Search and Filter */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
@@ -172,17 +192,6 @@ export default function Students() {
                 <option value="inactive">Inactive</option>
                 <option value="graduated">Graduated</option>
               </select>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                More Filters
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -226,7 +235,11 @@ export default function Students() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={student.id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => openViewModal(student)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{student.name}</div>
@@ -270,13 +283,19 @@ export default function Students() {
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() => openModal(student)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModal(student);
+                          }}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteStudent(student.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteStudent(student.id);
+                          }}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -291,7 +310,7 @@ export default function Students() {
         </CardContent>
       </Card>
 
-      {/* Modal */}
+      {/* Add/Edit Student Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -302,6 +321,214 @@ export default function Students() {
           onCancel={closeModal}
           initialData={editingStudent}
         />
+      </Modal>
+
+      {/* View Student Details Modal */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={closeViewModal}
+        title="Student Details"
+      >
+        {viewingStudent && (
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <User className="h-5 w-5 mr-2" />
+                Basic Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Full Name</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Email</label>
+                  <p className="text-sm text-gray-900 flex items-center">
+                    <Mail className="h-4 w-4 mr-1" />
+                    {viewingStudent.email}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Phone</label>
+                  <p className="text-sm text-gray-900 flex items-center">
+                    <Phone className="h-4 w-4 mr-1" />
+                    {viewingStudent.phone}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Gender</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.gender}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Status</label>
+                  <span className={getStatusBadge(viewingStudent.status)}>
+                    {viewingStudent.status}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Enrollment Date</label>
+                  <p className="text-sm text-gray-900 flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    {new Date(viewingStudent.enrollmentDate).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Address Information */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <MapPin className="h-5 w-5 mr-2" />
+                Address Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Address</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.address}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">City</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.city}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Postcode</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.postcode}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Location</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.location}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Course Information */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <BookOpen className="h-5 w-5 mr-2" />
+                Course Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Batch Number</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.batchNo}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Course Type</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.courseType}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Admission Type</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.admissionType}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Vendor</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.vendor}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-600">Enrolled Courses</label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {viewingStudent.courses.map((course, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                      >
+                        {course}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Assignment Information */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <FileText className="h-5 w-5 mr-2" />
+                Assignment Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Assignment Status</label>
+                  <span className={getAssignmentStatusBadge(viewingStudent.assignmentStatus)}>
+                    {viewingStudent.assignmentStatus}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Assignment Date</label>
+                  <p className="text-sm text-gray-900 flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    {new Date(viewingStudent.assignmentDate).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Information */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <DollarSign className="h-5 w-5 mr-2" />
+                Financial Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Course Fee</label>
+                  <p className="text-sm text-gray-900">${viewingStudent.courseFee}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Discount</label>
+                  <p className="text-sm text-gray-900">${viewingStudent.discount}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Total Paid</label>
+                  <p className="text-sm text-gray-900">${viewingStudent.totalPaid}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Received</label>
+                  <p className="text-sm text-gray-900">${viewingStudent.received}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Refund</label>
+                  <p className="text-sm text-gray-900">${viewingStudent.refund}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Balance Due</label>
+                  <p className="text-sm text-gray-900 font-semibold">${viewingStudent.balanceDue}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Payment Slots</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.paymentSlots}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Booked By</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.bookedBy || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            {viewingStudent.note && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Notes</h3>
+                <p className="text-sm text-gray-900">{viewingStudent.note}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <Button variant="outline" onClick={closeViewModal}>
+                Close
+              </Button>
+              <Button 
+                onClick={() => {
+                  closeViewModal();
+                  openModal(viewingStudent);
+                }}
+              >
+                Edit Student
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

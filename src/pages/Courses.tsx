@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { Course } from '../types';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Users, DollarSign, Clock } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Users, DollarSign, Clock, ChevronDown } from 'lucide-react';
 import api from '../services/api';
 
 export default function Courses() {
@@ -12,6 +12,8 @@ export default function Courses() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -34,10 +36,33 @@ export default function Courses() {
     fetchCourses();
   }, []);
 
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.filter-dropdown-container')) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const filteredCourses = courses.filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.courseCode.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    // Search filter
+    const searchMatch = 
+      course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.courseCode.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Status filter
+    const statusMatch = 
+      statusFilter === 'all' ||
+      course.status === statusFilter;
+
+    return searchMatch && statusMatch;
   });
 
   const handleAddCourse = async (courseData: any) => {
@@ -163,8 +188,10 @@ export default function Courses() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Courses</p>
-                <p className="text-3xl font-bold text-gray-900">{courses.length}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {searchTerm || statusFilter !== 'all' ? 'Filtered Courses' : 'Total Courses'}
+                </p>
+                <p className="text-3xl font-bold text-gray-900">{filteredCourses.length}</p>
               </div>
               <div className="p-3 bg-blue-500 rounded-full">
                 <Users className="h-6 w-6 text-white" />
@@ -179,7 +206,7 @@ export default function Courses() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Courses</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {courses.filter(c => c.status === 'active').length}
+                  {filteredCourses.filter(c => c.status === 'active').length}
                 </p>
               </div>
               <div className="p-3 bg-green-500 rounded-full">
@@ -194,28 +221,101 @@ export default function Courses() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search courses..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search courses by title or course code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              />
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
+            <div className="relative filter-dropdown-container">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center"
+              >
                 <Filter className="h-4 w-4 mr-2" />
-                More Filters
+                Filter
+                <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
+              
+              {showFilterDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <div className="p-3">
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">Course Status</h3>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="statusFilter"
+                          value="all"
+                          checked={statusFilter === 'all'}
+                          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">All Courses</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="statusFilter"
+                          value="active"
+                          checked={statusFilter === 'active'}
+                          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Active Only</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="statusFilter"
+                          value="inactive"
+                          checked={statusFilter === 'inactive'}
+                          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Inactive Only</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Filter Summary */}
+      {(searchTerm || statusFilter !== 'all') && (
+        <div className="flex items-center space-x-2 text-sm text-gray-600">
+          <span>Active filters:</span>
+          {searchTerm && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+              Search: "{searchTerm}"
+            </span>
+          )}
+          {statusFilter !== 'all' && (
+            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+              {statusFilter === 'active' ? 'Active Only' : 'Inactive Only'}
+            </span>
+          )}
+          <button 
+            onClick={() => {
+              setSearchTerm('');
+              setStatusFilter('all');
+            }}
+            className="text-red-600 hover:text-red-800 underline"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* Courses Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

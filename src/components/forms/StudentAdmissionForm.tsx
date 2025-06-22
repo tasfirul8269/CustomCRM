@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
-import { Student } from '../../types';
+import { Student, Vendor, Batch, Location } from '../../types';
+import api from '../../services/api';
 
 interface StudentAdmissionFormProps {
   onSubmit: (student: Omit<Student, 'id'>) => void;
@@ -41,6 +42,56 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loadingVendors, setLoadingVendors] = useState(true);
+  const [loadingBatches, setLoadingBatches] = useState(true);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+
+  // Fetch vendors, batches, and locations from API
+  const fetchVendors = async () => {
+    try {
+      setLoadingVendors(true);
+      const response = await api.get('/vendors');
+      setVendors(response.data);
+    } catch (err) {
+      console.error('Error fetching vendors:', err);
+    } finally {
+      setLoadingVendors(false);
+    }
+  };
+
+  const fetchBatches = async () => {
+    try {
+      setLoadingBatches(true);
+      const response = await api.get('/batches');
+      setBatches(response.data);
+    } catch (err) {
+      console.error('Error fetching batches:', err);
+    } finally {
+      setLoadingBatches(false);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      setLoadingLocations(true);
+      const response = await api.get('/locations');
+      setLocations(response.data);
+    } catch (err) {
+      console.error('Error fetching locations:', err);
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchVendors();
+    fetchBatches();
+    fetchLocations();
+  }, []);
 
   // Initialize form with initial data if editing
   useEffect(() => {
@@ -305,13 +356,14 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.batchNo ? 'border-red-500' : 'border-gray-300'
               }`}
+              disabled={loadingBatches}
             >
-              <option value="">Select batch</option>
-              <option value="batch-1">Batch 1</option>
-              <option value="batch-2">Batch 2</option>
-              <option value="batch-3">Batch 3</option>
-              <option value="batch-4">Batch 4</option>
-              <option value="batch-5">Batch 5</option>
+              <option value="">{loadingBatches ? 'Loading batches...' : 'Select batch'}</option>
+              {batches.map((batch) => (
+                <option key={batch.id || (batch as any)._id} value={batch.batchNo}>
+                  {batch.batchNo} - {batch.subjectCourse}
+                </option>
+              ))}
             </select>
             {errors.batchNo && <p className="text-red-500 text-sm mt-1">{errors.batchNo}</p>}
           </div>
@@ -326,11 +378,14 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.vendor ? 'border-red-500' : 'border-gray-300'
               }`}
+              disabled={loadingVendors}
             >
-              <option value="">Select vendor</option>
-              <option value="vendor-1">TechEd Solutions</option>
-              <option value="vendor-2">Learning Hub</option>
-              <option value="vendor-3">SkillForge</option>
+              <option value="">{loadingVendors ? 'Loading vendors...' : 'Select vendor'}</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id || (vendor as any)._id} value={vendor.name}>
+                  {vendor.name} - {vendor.company}
+                </option>
+              ))}
             </select>
             {errors.vendor && <p className="text-red-500 text-sm mt-1">{errors.vendor}</p>}
           </div>
@@ -345,12 +400,14 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.location ? 'border-red-500' : 'border-gray-300'
               }`}
+              disabled={loadingLocations}
             >
-              <option value="">Select location</option>
-              <option value="new-york">New York</option>
-              <option value="los-angeles">Los Angeles</option>
-              <option value="chicago">Chicago</option>
-              <option value="houston">Houston</option>
+              <option value="">{loadingLocations ? 'Loading locations...' : 'Select location'}</option>
+              {locations.map((location) => (
+                <option key={location.id || (location as any)._id} value={location.locationName}>
+                  {location.locationName}
+                </option>
+              ))}
             </select>
             {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
           </div>

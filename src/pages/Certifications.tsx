@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Search, Filter, Plus, Download, Mail, Printer, MoreVertical, Check, X, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, Mail, Printer, MoreVertical, Check, X, Edit, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import CertificateForm from '../components/forms/CertificateForm';
 import { Certificate } from '../types/certificate';
@@ -9,6 +9,7 @@ import api from '../services/api';
 
 export default function Certifications() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All Status');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificate, setEditingCertificate] = useState<Certificate | null>(null);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -34,11 +35,20 @@ export default function Certifications() {
     fetchCertificates();
   }, []);
 
-  const filteredCertificates = certificates.filter(cert => 
-    (cert.studentName && cert.studentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    cert.certificateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cert.courseName && cert.courseName.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredCertificates = certificates.filter(cert => {
+    // Search filter
+    const searchMatch =
+      (typeof cert.student === 'object' && cert.student && cert.student.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      cert.certificateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (typeof cert.course === 'object' && cert.course && cert.course.title.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // Status filter
+    const statusMatch = 
+      statusFilter === 'All Status' ||
+      cert.status === statusFilter.toLowerCase();
+
+    return searchMatch && statusMatch;
+  });
 
   const handleAddCertificate = async (certificateData: any) => {
     try {
@@ -58,7 +68,7 @@ export default function Certifications() {
       setMessage('');
       setError('');
       if (editingCertificate) {
-        const certificateId = editingCertificate.id || (editingCertificate as any)._id;
+        const certificateId = editingCertificate._id;
         await api.patch(`/certificates/${certificateId}`, certificateData);
         setMessage('Certificate updated successfully!');
         fetchCertificates(); // Refresh the list
@@ -127,10 +137,6 @@ export default function Certifications() {
           <p className="text-gray-600 mt-1">Manage and track certificate issuance and delivery</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
           <Button onClick={() => openModal()}>
             <Plus className="h-4 w-4 mr-2" />
             Issue Certificate
@@ -166,17 +172,16 @@ export default function Certifications() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <select 
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
                 <option>All Status</option>
-                <option>Issued</option>
                 <option>Pending</option>
+                <option>Issued</option>
                 <option>Dispatched</option>
-                <option>Delivered</option>
               </select>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -214,15 +219,15 @@ export default function Certifications() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCertificates.map((cert) => (
-                  <tr key={cert.id} className="hover:bg-gray-50">
+                  <tr key={cert._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                       {cert.certificateNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {cert.studentName}
+                      {typeof cert.student === 'object' && cert.student ? cert.student.name : ''}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {cert.courseName}
+                      {typeof cert.course === 'object' && cert.course ? cert.course.title : ''}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(cert.issueDate).toLocaleDateString()}
@@ -241,7 +246,7 @@ export default function Certifications() {
                           <Edit className="h-4 w-4" />
                         </button>
                         <button 
-                          onClick={() => handleDeleteCertificate(cert.id || (cert as any)._id)}
+                          onClick={() => handleDeleteCertificate(cert._id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 className="h-4 w-4" />

@@ -12,6 +12,7 @@ export default function Batches() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [publishedFilter, setPublishedFilter] = useState<string>('All Status');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -35,10 +36,20 @@ export default function Batches() {
     fetchBatches();
   }, []);
 
-  const filteredBatches = batches.filter(batch => 
-    batch.batchNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    batch.subjectCourse.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBatches = batches.filter(batch => {
+    // Search filter
+    const searchMatch = 
+      batch.batchNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      batch.subjectCourse.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Published status filter
+    const publishedMatch = 
+      publishedFilter === 'All Status' ||
+      (publishedFilter === 'Published' && batch.publishedStatus) ||
+      (publishedFilter === 'Draft' && !batch.publishedStatus);
+
+    return searchMatch && publishedMatch;
+  });
 
   const handleAddBatch = async (batchData: any) => {
     try {
@@ -182,16 +193,15 @@ export default function Batches() {
               />
             </div>
             <div className="flex space-x-2">
-              <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <select 
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                value={publishedFilter}
+                onChange={(e) => setPublishedFilter(e.target.value)}
+              >
                 <option>All Status</option>
-                <option>Upcoming</option>
-                <option>Active</option>
-                <option>Completed</option>
+                <option>Published</option>
+                <option>Draft</option>
               </select>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
             </div>
           </div>
         </CardContent>

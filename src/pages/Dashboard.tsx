@@ -1,146 +1,328 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import {
   Users,
   BookOpen,
-  DollarSign,
   Calendar,
   Award,
-  TrendingUp,
   ArrowRight,
   UserPlus,
   PlusCircle,
+  Building,
+  MapPin,
+  Activity,
+  Briefcase,
+  BarChart3,
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const stats = [
-    {
-      title: 'Total Students',
-      value: '2,847',
-      change: '+12%',
-      changeType: 'positive',
-      icon: Users,
-      color: 'bg-blue-500',
-    },
-    {
-      title: 'Active Courses',
-      value: '24',
-      change: '+3',
-      changeType: 'positive',
-      icon: BookOpen,
-      color: 'bg-green-500',
-    },
-    {
-      title: 'Monthly Revenue',
-      value: '$84,250',
-      change: '+8.2%',
-      changeType: 'positive',
-      icon: DollarSign,
-      color: 'bg-yellow-500',
-    },
-    {
-      title: 'Active Batches',
-      value: '18',
-      change: '+2',
-      changeType: 'positive',
-      icon: Calendar,
-      color: 'bg-purple-500',
-    },
-    {
-      title: 'Certificates Pending',
-      value: '156',
-      change: '-5',
-      changeType: 'negative',
-      icon: Award,
-      color: 'bg-red-500',
-    },
-    {
-      title: 'Growth Rate',
-      value: '23.5%',
-      change: '+4.1%',
-      changeType: 'positive',
-      icon: TrendingUp,
-      color: 'bg-indigo-500',
-    },
-  ];
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const [
+        studentsRes,
+        coursesRes,
+        batchesRes,
+        certificationsRes,
+        employeesRes,
+        vendorsRes,
+        locationsRes,
+      ] = await Promise.all([
+        api.get('/students'),
+        api.get('/courses'),
+        api.get('/batches'),
+        api.get('/certificates'),
+        api.get('/employees'),
+        api.get('/vendors'),
+        api.get('/locations'),
+      ]);
+
+      const students = studentsRes.data;
+      const courses = coursesRes.data;
+      const batches = batchesRes.data;
+      const certifications = certificationsRes.data;
+      const employees = employeesRes.data;
+      const vendors = vendorsRes.data;
+      const locations = locationsRes.data;
+
+      setStats({
+        students: {
+          total: students.length,
+          active: students.filter((s: any) => s.status === 'active').length,
+          pending: students.filter((s: any) => s.status === 'pending').length,
+        },
+        courses: {
+          total: courses.length,
+          active: courses.filter((c: any) => c.status === 'active').length,
+          inactive: courses.filter((c: any) => c.status === 'inactive').length,
+        },
+        batches: {
+          total: batches.length,
+          published: batches.filter((b: any) => b.status === 'published').length,
+          draft: batches.filter((b: any) => b.status === 'draft').length,
+        },
+        certifications: {
+          total: certifications.length,
+          pending: certifications.filter((c: any) => c.status === 'pending').length,
+          issued: certifications.filter((c: any) => c.status === 'issued').length,
+        },
+        employees: {
+          total: employees.length,
+          live: employees.filter((e: any) => e.status === 'Live').length,
+          inactive: employees.filter((e: any) => e.status === 'Inactive').length,
+        },
+        vendors: {
+          total: vendors.length,
+          published: vendors.filter((v: any) => v.published).length,
+          unpublished: vendors.filter((v: any) => !v.published).length,
+        },
+        locations: {
+          total: locations.length,
+        },
+      });
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   const quickActions = [
     {
-      title: 'Add New Student',
-      description: 'Register a new student with admission form',
+      title: 'Add Student',
+      description: 'Register new student',
       icon: UserPlus,
       action: () => navigate('/students'),
-      color: 'bg-blue-500',
+      color: 'bg-blue-500 hover:bg-blue-600',
     },
     {
       title: 'Create Course',
-      description: 'Add a new course to the catalog',
+      description: 'Add new course',
       icon: PlusCircle,
       action: () => navigate('/courses'),
-      color: 'bg-green-500',
+      color: 'bg-green-500 hover:bg-green-600',
     },
     {
       title: 'Schedule Batch',
-      description: 'Create a new batch for existing courses',
+      description: 'Create new batch',
       icon: Calendar,
       action: () => navigate('/batches'),
-      color: 'bg-purple-500',
+      color: 'bg-purple-500 hover:bg-purple-600',
     },
     {
       title: 'Process Certificates',
-      description: 'Review and dispatch pending certificates',
+      description: 'Manage certifications',
       icon: Award,
       action: () => navigate('/certifications'),
-      color: 'bg-yellow-500',
+      color: 'bg-yellow-500 hover:bg-yellow-600',
+    },
+    {
+      title: 'Add Employee',
+      description: 'Register new employee',
+      icon: Briefcase,
+      action: () => navigate('/employees'),
+      color: 'bg-indigo-500 hover:bg-indigo-600',
+    },
+    {
+      title: 'Add Vendor',
+      description: 'Register new vendor',
+      icon: Building,
+      action: () => navigate('/vendors'),
+      color: 'bg-orange-500 hover:bg-orange-600',
+    },
+    {
+      title: 'Add Location',
+      description: 'Add new location',
+      icon: MapPin,
+      action: () => navigate('/locations'),
+      color: 'bg-red-500 hover:bg-red-600',
+    },
+    {
+      title: 'View Reports',
+      description: 'Analytics & reports',
+      icon: BarChart3,
+      action: () => navigate('/reports'),
+      color: 'bg-gray-500 hover:bg-gray-600',
     },
   ];
 
-  const recentActivities = [
-    { type: 'Student Registration', name: 'John Doe enrolled in React Fundamentals', time: '2 hours ago' },
-    { type: 'Course Completion', name: 'Alice Smith completed JavaScript Advanced', time: '4 hours ago' },
-    { type: 'Payment Received', name: '$450 payment from Michael Brown', time: '6 hours ago' },
-    { type: 'New Batch Created', name: 'React Advanced Batch #12 scheduled', time: '1 day ago' },
-    { type: 'Certificate Issued', name: 'Certificate #2847 issued to Sarah Wilson', time: '1 day ago' },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading dashboard...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-100 text-red-700 rounded-md">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your LMS today.</p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-2">Welcome back! Here's your comprehensive overview.</p>
+        </div>
+        <div className="mt-4 md:mt-0">
+          <Button onClick={fetchDashboardData} variant="outline" size="sm">
+            <Activity className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                  <div className="flex items-center mt-2">
-                    <span
-                      className={`text-sm font-medium ${
-                        stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {stat.change}
-                    </span>
-                    <span className="text-sm text-gray-500 ml-1">from last month</span>
-                  </div>
-                </div>
-                <div className={`p-3 rounded-full ${stat.color}`}>
-                  <stat.icon className="h-6 w-6 text-white" />
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Students</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.students.total || 0}</p>
+                <div className="flex items-center mt-2">
+                  <span className="text-sm font-medium text-green-600">
+                    {stats?.students.active || 0} active
+                  </span>
+                  <span className="text-sm text-gray-500 ml-2">
+                    {stats?.students.pending || 0} pending
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className="p-3 rounded-full bg-blue-500">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Courses</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.courses.active || 0}</p>
+                <div className="flex items-center mt-2">
+                  <span className="text-sm font-medium text-green-600">
+                    {stats?.courses.total || 0} total
+                  </span>
+                  <span className="text-sm text-gray-500 ml-2">
+                    {stats?.courses.inactive || 0} inactive
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 rounded-full bg-green-500">
+                <BookOpen className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending Certificates</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.certifications.pending || 0}</p>
+                <div className="flex items-center mt-2">
+                  <span className="text-sm font-medium text-yellow-600">
+                    {stats?.certifications.total || 0} total
+                  </span>
+                  <span className="text-sm text-gray-500 ml-2">
+                    {stats?.certifications.issued || 0} issued
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 rounded-full bg-red-500">
+                <Award className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Batches</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.batches.published || 0}</p>
+                <p className="text-xs text-gray-500">{stats?.batches.total || 0} total</p>
+              </div>
+              <div className="p-2 rounded-full bg-purple-500">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Employees</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.employees.live || 0}</p>
+                <p className="text-xs text-gray-500">{stats?.employees.total || 0} total</p>
+              </div>
+              <div className="p-2 rounded-full bg-indigo-500">
+                <Briefcase className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Vendors</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.vendors.published || 0}</p>
+                <p className="text-xs text-gray-500">{stats?.vendors.total || 0} total</p>
+              </div>
+              <div className="p-2 rounded-full bg-orange-500">
+                <Building className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Locations</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.locations.total || 0}</p>
+                <p className="text-xs text-gray-500">Active centers</p>
+              </div>
+              <div className="p-2 rounded-full bg-red-500">
+                <MapPin className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions */}
@@ -170,59 +352,87 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Recent Activities and Charts */}
+      {/* Performance Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Activities</h2>
-              <Button variant="outline" size="sm">
-                View All
-              </Button>
-            </div>
+            <h2 className="text-lg font-semibold text-gray-900">System Performance</h2>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {recentActivities.map((activity, index) => (
-              <div key={index} className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{activity.type}</p>
-                  <p className="text-sm text-gray-600">{activity.name}</p>
-                  <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+          <CardContent>
+            <div className="space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">Student Enrollment Rate</span>
+                  <span className="text-sm font-bold text-gray-900">
+                    {stats?.students.total ? Math.round((stats.students.active / stats.students.total) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+                    style={{ 
+                      width: `${stats?.students.total ? (stats.students.active / stats.students.total) * 100 : 0}%` 
+                    }} 
+                  />
                 </div>
               </div>
-            ))}
+              
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">Course Completion Rate</span>
+                  <span className="text-sm font-bold text-gray-900">
+                    {stats?.certifications.total ? Math.round((stats.certifications.issued / stats.certifications.total) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full transition-all duration-500" 
+                    style={{ 
+                      width: `${stats?.certifications.total ? (stats.certifications.issued / stats.certifications.total) * 100 : 0}%` 
+                    }} 
+                  />
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold text-gray-900">Monthly Performance</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Quick Stats</h2>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Student Enrollments</span>
-                <span className="text-sm font-bold text-gray-900">247</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '78%' }} />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Course Completions</span>
-                <span className="text-sm font-bold text-gray-900">186</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full" style={{ width: '65%' }} />
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 text-blue-600 mr-3" />
+                  <span className="text-sm font-medium text-gray-700">Total Students</span>
+                </div>
+                <span className="text-lg font-bold text-blue-600">{stats?.students.total || 0}</span>
               </div>
               
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Revenue Target</span>
-                <span className="text-sm font-bold text-gray-900">$84,250</span>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center">
+                  <BookOpen className="h-5 w-5 text-green-600 mr-3" />
+                  <span className="text-sm font-medium text-gray-700">Active Courses</span>
+                </div>
+                <span className="text-lg font-bold text-green-600">{stats?.courses.active || 0}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '92%' }} />
+              
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 text-purple-600 mr-3" />
+                  <span className="text-sm font-medium text-gray-700">Published Batches</span>
+                </div>
+                <span className="text-lg font-bold text-purple-600">{stats?.batches.published || 0}</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div className="flex items-center">
+                  <Award className="h-5 w-5 text-yellow-600 mr-3" />
+                  <span className="text-sm font-medium text-gray-700">Pending Certificates</span>
+                </div>
+                <span className="text-lg font-bold text-yellow-600">{stats?.certifications.pending || 0}</span>
               </div>
             </div>
           </CardContent>
@@ -230,4 +440,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
+} 

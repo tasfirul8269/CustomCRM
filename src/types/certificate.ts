@@ -1,10 +1,17 @@
+export interface Student {
+  _id: string;
+  name: string;
+}
+
+export interface Course {
+  _id: string;
+  title: string;
+}
+
 export interface Certificate {
-  id: string;
-  _id?: string;
-  student: string; // ObjectId reference
-  studentName?: string; // For display purposes
-  course: string; // ObjectId reference
-  courseName?: string; // For display purposes
+  _id: string;
+  student: string | Student; // ObjectId reference or populated object
+  course: string | Course; // ObjectId reference or populated object
   issueDate: string;
   certificateNumber: string;
   status: 'pending' | 'issued' | 'dispatched';

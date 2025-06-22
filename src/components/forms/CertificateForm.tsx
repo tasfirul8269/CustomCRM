@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
 import { Certificate } from '../../types/certificate';
+import api from '../../services/api';
+
+interface Course {
+  _id: string;
+  title: string;
+}
+
+interface Student {
+  _id: string;
+  name: string;
+}
 
 interface CertificateFormData {
   student: string;
@@ -30,6 +41,30 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch courses and students
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [coursesRes, studentsRes] = await Promise.all([
+          api.get('/courses'),
+          api.get('/students')
+        ]);
+        setCourses(coursesRes.data);
+        setStudents(studentsRes.data);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Initialize form with initial data if editing
   useEffect(() => {
@@ -47,8 +82,8 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
       };
 
       setFormData({
-        student: initialData.student,
-        course: initialData.course,
+        student: typeof initialData.student === 'object' ? initialData.student._id : initialData.student || '',
+        course: typeof initialData.course === 'object' ? initialData.course._id : initialData.course || '',
         issueDate: formatDateForInput(initialData.issueDate),
         certificateNumber: initialData.certificateNumber,
         status: initialData.status,
@@ -73,20 +108,23 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      // Convert dates to proper format for backend
+      const submitData = {
+        ...formData,
+        issueDate: new Date(formData.issueDate).toISOString(),
+        sentDate: formData.sentDate ? new Date(formData.sentDate).toISOString() : undefined,
+      };
+      onSubmit(submitData);
     }
   };
 
-  const availableCourses = [
-    'React Fundamentals',
-    'JavaScript Advanced',
-    'Python for Beginners',
-    'UI/UX Design',
-    'Data Science Basics',
-    'Node.js Backend',
-    'Digital Marketing',
-    'Machine Learning',
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-lg">Loading form data...</div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -95,15 +133,18 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Student *
           </label>
-          <input
-            type="text"
+          <select
             value={formData.student}
             onChange={(e) => setFormData(prev => ({ ...prev, student: e.target.value }))}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               errors.student ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="Enter student name"
-          />
+          >
+            <option value="">Select student</option>
+            {students.map((student) => (
+              <option key={student._id} value={student._id}>{student.name}</option>
+            ))}
+          </select>
           {errors.student && <p className="text-red-500 text-sm mt-1">{errors.student}</p>}
         </div>
 
@@ -119,8 +160,8 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
             }`}
           >
             <option value="">Select course</option>
-            {availableCourses.map((course) => (
-              <option key={course} value={course}>{course}</option>
+            {courses.map((course) => (
+              <option key={course._id} value={course._id}>{course.title}</option>
             ))}
           </select>
           {errors.course && <p className="text-red-500 text-sm mt-1">{errors.course}</p>}
