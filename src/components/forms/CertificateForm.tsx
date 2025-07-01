@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Button from '../ui/Button';
 import { Certificate } from '../../types/certificate';
 import api from '../../services/api';
@@ -44,6 +44,22 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // For autocomplete dropdowns
+  const [studentQuery, setStudentQuery] = useState('');
+  const [showStudentSuggestions, setShowStudentSuggestions] = useState(false);
+  const [courseQuery, setCourseQuery] = useState('');
+  const [showCourseSuggestions, setShowCourseSuggestions] = useState(false);
+  const studentInputRef = useRef<HTMLInputElement>(null);
+  const courseInputRef = useRef<HTMLInputElement>(null);
+
+  // Filtered suggestions
+  const filteredStudentSuggestions = students.filter(s =>
+    s.name.toLowerCase().includes(studentQuery.toLowerCase())
+  );
+  const filteredCourseSuggestions = courses.filter(c =>
+    c.title.toLowerCase().includes(courseQuery.toLowerCase())
+  );
 
   // Fetch courses and students
   useEffect(() => {
@@ -93,16 +109,20 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
     }
   }, [initialData]);
 
+  // Set initial query when editing
+  useEffect(() => {
+    if (initialData && students.length && courses.length) {
+      const studentObj = students.find(s => s._id === formData.student);
+      setStudentQuery(studentObj ? studentObj.name : '');
+      const courseObj = courses.find(c => c._id === formData.course);
+      setCourseQuery(courseObj ? courseObj.title : '');
+    }
+  }, [initialData, students, courses, formData.student, formData.course]);
+
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.student) newErrors.student = 'Student is required';
-    if (!formData.course) newErrors.course = 'Course is required';
-    if (!formData.issueDate) newErrors.issueDate = 'Issue date is required';
-    if (!formData.certificateNumber) newErrors.certificateNumber = 'Certificate number is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // No required field validation
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -129,41 +149,86 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
+        {/* Student Autocomplete */}
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Student *
           </label>
-          <select
-            value={formData.student}
-            onChange={(e) => setFormData(prev => ({ ...prev, student: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.student ? 'border-red-500' : 'border-gray-300'
-            }`}
-          >
-            <option value="">Select student</option>
-            {students.map((student) => (
-              <option key={student._id} value={student._id}>{student.name}</option>
-            ))}
-          </select>
+          <input
+            ref={studentInputRef}
+            type="text"
+            value={studentQuery}
+            onChange={e => {
+              setStudentQuery(e.target.value);
+              setShowStudentSuggestions(true);
+              setFormData(prev => ({ ...prev, student: '' }));
+            }}
+            onFocus={() => setShowStudentSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowStudentSuggestions(false), 100)}
+            placeholder="Type to search student..."
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.student ? 'border-red-500' : 'border-gray-300'}`}
+          />
+          {showStudentSuggestions && studentQuery && (
+            <ul className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-1 w-full max-h-48 overflow-y-auto shadow-lg">
+              {filteredStudentSuggestions.length === 0 && (
+                <li className="px-3 py-2 text-gray-500">No students found</li>
+              )}
+              {filteredStudentSuggestions.map(student => (
+                <li
+                  key={student._id}
+                  className="px-3 py-2 cursor-pointer hover:bg-blue-100"
+                  onMouseDown={() => {
+                    setFormData(prev => ({ ...prev, student: student._id }));
+                    setStudentQuery(student.name);
+                    setShowStudentSuggestions(false);
+                  }}
+                >
+                  {student.name}
+                </li>
+              ))}
+            </ul>
+          )}
           {errors.student && <p className="text-red-500 text-sm mt-1">{errors.student}</p>}
         </div>
-
-        <div>
+        {/* Course Autocomplete */}
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Course *
           </label>
-          <select
-            value={formData.course}
-            onChange={(e) => setFormData(prev => ({ ...prev, course: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.course ? 'border-red-500' : 'border-gray-300'
-            }`}
-          >
-            <option value="">Select course</option>
-            {courses.map((course) => (
-              <option key={course._id} value={course._id}>{course.title}</option>
-            ))}
-          </select>
+          <input
+            ref={courseInputRef}
+            type="text"
+            value={courseQuery}
+            onChange={e => {
+              setCourseQuery(e.target.value);
+              setShowCourseSuggestions(true);
+              setFormData(prev => ({ ...prev, course: '' }));
+            }}
+            onFocus={() => setShowCourseSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowCourseSuggestions(false), 100)}
+            placeholder="Type to search course..."
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.course ? 'border-red-500' : 'border-gray-300'}`}
+          />
+          {showCourseSuggestions && courseQuery && (
+            <ul className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-1 w-full max-h-48 overflow-y-auto shadow-lg">
+              {filteredCourseSuggestions.length === 0 && (
+                <li className="px-3 py-2 text-gray-500">No courses found</li>
+              )}
+              {filteredCourseSuggestions.map(course => (
+                <li
+                  key={course._id}
+                  className="px-3 py-2 cursor-pointer hover:bg-blue-100"
+                  onMouseDown={() => {
+                    setFormData(prev => ({ ...prev, course: course._id }));
+                    setCourseQuery(course.title);
+                    setShowCourseSuggestions(false);
+                  }}
+                >
+                  {course.title}
+                </li>
+              ))}
+            </ul>
+          )}
           {errors.course && <p className="text-red-500 text-sm mt-1">{errors.course}</p>}
         </div>
 

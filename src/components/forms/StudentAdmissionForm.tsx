@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Button from '../ui/Button';
 import { Student, Vendor, Batch, Location } from '../../types';
 import api from '../../services/api';
@@ -12,13 +12,10 @@ interface StudentAdmissionFormProps {
 export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }: StudentAdmissionFormProps) {
   const [formData, setFormData] = useState({
     // Basic Information
-    admissionDate: new Date().toISOString().split('T')[0],
+    admissionDate: '',
     name: '',
     phone: '',
     email: '',
-    address: '',
-    city: '',
-    postcode: '',
     gender: '',
     status: 'active' as 'active' | 'inactive' | 'graduated',
     batchNo: '',
@@ -48,6 +45,10 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
   const [loadingVendors, setLoadingVendors] = useState(true);
   const [loadingBatches, setLoadingBatches] = useState(true);
   const [loadingLocations, setLoadingLocations] = useState(true);
+  const [paymentPlan, setPaymentPlan] = useState<{ date: string; amount: number; received: number }[]>([{ date: '', amount: 0, received: 0 }]);
+  const didInit = useRef(false);
+  const [initialSlots, setInitialSlots] = useState('');
+  const [initialAdmissionType, setInitialAdmissionType] = useState('');
 
   // Fetch vendors, batches, and locations from API
   const fetchVendors = async () => {
@@ -96,23 +97,39 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
   // Initialize form with initial data if editing
   useEffect(() => {
     if (initialData) {
+      // Debug: log the paymentPlan received
+      if (initialData.paymentPlan) {
+        // eslint-disable-next-line no-console
+        console.log('Editing paymentPlan:', initialData.paymentPlan);
+      }
       setFormData({
-        admissionDate: initialData.enrollmentDate || new Date().toISOString().split('T')[0],
+        admissionDate: (function() {
+          const d = initialData.enrollmentDate;
+          if (!d) return new Date().toISOString().split('T')[0];
+          if (typeof d === 'string' && d.length === 10 && d.match(/^\d{4}-\d{2}-\d{2}$/)) return d;
+          const dateObj = new Date(d);
+          if (!isNaN(dateObj.getTime())) return dateObj.toISOString().split('T')[0];
+          return '';
+        })(),
         name: initialData.name || '',
         phone: initialData.phone || '',
         email: initialData.email || '',
-        address: initialData.address || '',
-        city: initialData.city || '',
-        postcode: initialData.postcode || '',
         gender: initialData.gender || '',
         status: initialData.status || 'active',
         batchNo: initialData.batchNo || '',
         vendor: initialData.vendor || '',
         location: initialData.location || '',
-        bookedBy: initialData.bookedBy || '',
+        bookedBy: typeof initialData.bookedBy === 'object' ? initialData.bookedBy?._id || '' : initialData.bookedBy || '',
         courseType: initialData.courseType || '',
         assignmentStatus: initialData.assignmentStatus || 'pending',
-        assignmentDate: initialData.assignmentDate || '',
+        assignmentDate: (function() {
+          const d = initialData.assignmentDate;
+          if (!d) return '';
+          if (typeof d === 'string' && d.length === 10 && d.match(/^\d{4}-\d{2}-\d{2}$/)) return d;
+          const dateObj = new Date(d);
+          if (!isNaN(dateObj.getTime())) return dateObj.toISOString().split('T')[0];
+          return '';
+        })(),
         note: initialData.note || '',
         admissionType: initialData.admissionType || '',
         paymentSlots: initialData.paymentSlots || '',
@@ -123,29 +140,63 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         refund: initialData.refund || 0,
         balanceDue: initialData.balanceDue || 0,
       });
+      if (Array.isArray(initialData.paymentPlan) && initialData.paymentPlan.length > 0) {
+        setPaymentPlan(initialData.paymentPlan.map(row => {
+          let dateStr = '';
+          if (row.date) {
+            if (typeof row.date === 'string' && row.date.length === 10 && row.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              dateStr = row.date;
+            } else {
+              const d = new Date(row.date);
+              if (!isNaN(d.getTime())) {
+                dateStr = d.toISOString().split('T')[0];
+              }
+            }
+          }
+          return {
+            date: dateStr,
+            amount: typeof row.amount === 'number' ? row.amount : (parseFloat(row.amount) || 0),
+            received: typeof row.received === 'number' ? row.received : (parseFloat(row.received) || 0)
+          };
+        }));
+      } else {
+        setPaymentPlan([{ date: '', amount: 0, received: 0 }]);
+      }
+      setInitialSlots(initialData.paymentSlots || '');
+      setInitialAdmissionType(initialData.admissionType || '');
+      didInit.current = true;
     }
   }, [initialData]);
 
+  // Only update paymentPlan if the user changes slots/type after initial load
+  useEffect(() => {
+    if (!didInit.current) return;
+    if (
+      formData.paymentSlots !== initialSlots ||
+      formData.admissionType !== initialAdmissionType
+    ) {
+      if (formData.admissionType === 'price-plan') {
+        let slots = parseInt(formData.paymentSlots);
+        if (isNaN(slots) || slots < 1) slots = 1;
+        setPaymentPlan((prev) => {
+          const newPlan = [...prev];
+          if (newPlan.length < slots) {
+            while (newPlan.length < slots) newPlan.push({ date: '', amount: 0, received: 0 });
+          } else if (newPlan.length > slots) {
+            newPlan.length = slots;
+          }
+          return newPlan;
+        });
+      } else {
+        setPaymentPlan([{ date: '', amount: 0, received: 0 }]);
+      }
+    }
+  }, [formData.paymentSlots, formData.admissionType]);
+
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) newErrors.name = 'Student name is required';
-    if (!formData.phone.trim()) newErrors.phone = 'Contact number is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
-    if (!formData.city.trim()) newErrors.city = 'City is required';
-    if (!formData.postcode.trim()) newErrors.postcode = 'Postcode is required';
-    if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (!formData.batchNo) newErrors.batchNo = 'Batch number is required';
-    if (!formData.vendor) newErrors.vendor = 'Vendor is required';
-    if (!formData.location) newErrors.location = 'Location is required';
-    if (!formData.bookedBy) newErrors.bookedBy = 'Booking method is required';
-    if (!formData.courseType) newErrors.courseType = 'Course type is required';
-    if (!formData.admissionType) newErrors.admissionType = 'Admission type is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // No required field validation
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -161,9 +212,6 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         courses: [], // Will be populated based on batch/course selection
         totalPaid: formData.totalPaid,
         // Additional fields for the extended student model
-        address: formData.address,
-        city: formData.city,
-        postcode: formData.postcode,
         gender: formData.gender,
         batchNo: formData.batchNo,
         vendor: formData.vendor,
@@ -178,6 +226,9 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         received: formData.received,
         refund: formData.refund,
         balanceDue: formData.balanceDue,
+        bookedBy: formData.bookedBy,
+        // Add paymentPlan if price-plan
+        ...(formData.admissionType === 'price-plan' ? { paymentPlan } : {}),
       };
       onSubmit(newStudent);
     }
@@ -256,54 +307,6 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
               placeholder="Enter email address"
             />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Address *
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.address ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="Enter full address"
-            />
-            {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              City *
-            </label>
-            <input
-              type="text"
-              value={formData.city}
-              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.city ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="Enter city"
-            />
-            {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Postcode *
-            </label>
-            <input
-              type="text"
-              value={formData.postcode}
-              onChange={(e) => setFormData(prev => ({ ...prev, postcode: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.postcode ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="Enter postcode"
-            />
-            {errors.postcode && <p className="text-red-500 text-sm mt-1">{errors.postcode}</p>}
           </div>
 
           <div>
@@ -414,7 +417,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Booked By *
+              Booked By
             </label>
             <select
               value={formData.bookedBy}
@@ -519,9 +522,19 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
               Payment Slots
             </label>
             <input
-              type="text"
+              type="number"
+              min={1}
+              step={1}
               value={formData.paymentSlots}
-              onChange={(e) => setFormData(prev => ({ ...prev, paymentSlots: e.target.value }))}
+              onChange={e => {
+                // Allow empty string for typing
+                setFormData(prev => ({ ...prev, paymentSlots: e.target.value }));
+              }}
+              onBlur={e => {
+                let val = parseInt(e.target.value);
+                if (isNaN(val) || val < 1) val = 1;
+                setFormData(prev => ({ ...prev, paymentSlots: val.toString() }));
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g., 3 installments"
             />
@@ -615,6 +628,71 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             />
           </div>
         </div>
+        {/* Dynamic Payment Plan Rows */}
+        {formData.admissionType === 'price-plan' && (
+          <div className="mt-6">
+            <h4 className="text-md font-semibold mb-2">Payment Plan</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border border-gray-200 rounded-lg">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">#</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">Received</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentPlan.map((row, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-2">{idx + 1}</td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="date"
+                          value={row.date || ''}
+                          onChange={e => {
+                            const newPlan = [...paymentPlan];
+                            newPlan[idx].date = e.target.value;
+                            setPaymentPlan(newPlan);
+                          }}
+                          className="border border-gray-300 rounded px-2 py-1 w-36"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          value={typeof row.amount === 'number' && !isNaN(row.amount) ? row.amount : ''}
+                          onChange={e => {
+                            const newPlan = [...paymentPlan];
+                            newPlan[idx].amount = parseFloat(e.target.value) || 0;
+                            setPaymentPlan(newPlan);
+                          }}
+                          className="border border-gray-300 rounded px-2 py-1 w-24"
+                          min="0"
+                          step="0.01"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          value={typeof row.received === 'number' && !isNaN(row.received) ? row.received : ''}
+                          onChange={e => {
+                            const newPlan = [...paymentPlan];
+                            newPlan[idx].received = parseFloat(e.target.value) || 0;
+                            setPaymentPlan(newPlan);
+                          }}
+                          className="border border-gray-300 rounded px-2 py-1 w-24"
+                          min="0"
+                          step="0.01"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">

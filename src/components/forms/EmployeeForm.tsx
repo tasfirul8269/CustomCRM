@@ -94,31 +94,10 @@ export default function EmployeeForm({
     }
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    // Photo is only required for new employees
-    if (!initialData?.photo && !formData.photo) newErrors.photo = 'Photo is required';
-    if (!formData.email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    if (!formData.mobileNumber) newErrors.mobileNumber = 'Mobile number is required';
-    if (!formData.fullName) newErrors.fullName = 'Full name is required';
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
-    if (!formData.licenseNumber) newErrors.licenseNumber = 'License number is required';
-    if (!formData.addressLine1) newErrors.addressLine1 = 'Address line 1 is required';
-    if (!formData.joiningDate) newErrors.joiningDate = 'Joining date is required';
-    // Signature is only required for new employees
-    if (!initialData?.signature && !formData.signature) newErrors.signature = 'Signature is required';
-    if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (!formData.note || formData.note.length < 200) {
-      // Note is only required to be 200 characters for new employees
-      if (!initialData?.note) {
-        newErrors.note = 'Note must be at least 200 characters';
-      }
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validateForm = () => {
+    // No required field validation
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = async (e: FormEvent) => {

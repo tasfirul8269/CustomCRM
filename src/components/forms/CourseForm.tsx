@@ -38,14 +38,9 @@ export default function CourseForm({ onSubmit, onCancel, initialData }: CourseFo
   }, [initialData]);
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.courseTitle.trim()) newErrors.courseTitle = 'Course title is required';
-    if (!formData.courseCode.trim()) newErrors.courseCode = 'Course code is required';
-    if (formData.assignmentDuration <= 0) newErrors.assignmentDuration = 'Assignment duration must be greater than 0';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // No required field validation
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

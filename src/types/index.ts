@@ -27,6 +27,11 @@ export interface Student {
   received: number;
   refund: number;
   balanceDue: number;
+  paymentPlan?: { date: string; amount: number; received: number }[];
+  resit?: {
+    batch: string;
+    status: string; // 'yes' or 'no'
+  };
 }
 
 export interface Course {

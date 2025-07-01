@@ -4,8 +4,10 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import StudentAdmissionForm from '../components/forms/StudentAdmissionForm';
 import { Student } from '../types';
-import { Plus, Search, Eye, Edit, Trash2, Calendar, MapPin, Phone, Mail, DollarSign, User, BookOpen, FileText, CreditCard } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Calendar, MapPin, Phone, Mail, DollarSign, User, BookOpen, FileText, CreditCard, Square } from 'lucide-react';
 import api from '../services/api';
+import { Batch } from '../types/batch';
+import Select from 'react-select';
 
 export default function Students() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -18,13 +20,28 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [resitModalOpen, setResitModalOpen] = useState(false);
+  const [resitStudent, setResitStudent] = useState<Student | null>(null);
+  const [resitBatch, setResitBatch] = useState('');
+  const [resitStatus, setResitStatus] = useState('yes');
+  const [batchOptions, setBatchOptions] = useState<Batch[]>([]);
+  const [batchSearch, setBatchSearch] = useState('');
+  const [loadingBatches, setLoadingBatches] = useState(false);
 
   // Fetch students from API
   const fetchStudents = async () => {
     try {
       setLoading(true);
       const response = await api.get('/students');
-      setStudents(response.data);
+      // Map _id to id for each student
+      const studentsWithId = response.data.map((s: any) => ({
+        ...s,
+        id: s._id,
+        bookedBy: s.bookedBy?._id || s.bookedBy || '',
+        paymentPlan: Array.isArray(s.paymentPlan) ? s.paymentPlan : [],
+      }));
+      console.log('Fetched students:', studentsWithId);
+      setStudents(studentsWithId);
     } catch (err) {
       console.error('Error fetching students:', err);
       setError('Failed to fetch students');
@@ -33,8 +50,34 @@ export default function Students() {
     }
   };
 
+  // Fetch batches for resit modal
+  const fetchBatches = async (search = '') => {
+    setLoadingBatches(true);
+    const response = await api.get('/batches');
+    setBatchOptions(
+      response.data.filter((b: Batch) =>
+        b.batchNo.toLowerCase().includes(search.toLowerCase()) ||
+        b.subjectCourse.toLowerCase().includes(search.toLowerCase())
+      )
+    );
+    setLoadingBatches(false);
+  };
+
   useEffect(() => {
     fetchStudents();
+  }, []);
+
+  useEffect(() => {
+    if (resitModalOpen) fetchBatches(batchSearch);
+  }, [resitModalOpen, batchSearch]);
+
+  // Inject resit bar style into the document head
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `.resit-bar::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: #dc2626; border-radius: 3px 0 0 3px; }
+    .resit-bar > .text-sm { padding-left: 17px; }`;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
   }, []);
 
   const filteredStudents = students.filter(student => {
@@ -113,6 +156,31 @@ export default function Students() {
   const closeViewModal = () => {
     setIsViewModalOpen(false);
     setViewingStudent(null);
+  };
+
+  const openResitModal = (student: Student) => {
+    setResitStudent(student);
+    setResitBatch(student.resit?.batch || '');
+    setResitStatus(student.resit?.status || 'yes');
+    setResitModalOpen(true);
+  };
+
+  const closeResitModal = () => {
+    setResitModalOpen(false);
+    setResitStudent(null);
+    setResitBatch('');
+    setResitStatus('yes');
+    setBatchSearch('');
+  };
+
+  const handleResitSubmit = async () => {
+    if (!resitStudent) return;
+    console.log('PATCH /students/:id payload:', { resit: { batch: resitBatch, status: resitStatus } });
+    await api.patch(`/students/${resitStudent.id}`, { resit: { batch: resitBatch, status: resitStatus } })
+      .then((res: any) => console.log('PATCH /students/:id response:', res.data))
+      .catch((err: any) => console.error('PATCH /students/:id error:', err));
+    fetchStudents();
+    closeResitModal();
   };
 
   const getStatusBadge = (status: Student['status']) => {
@@ -235,13 +303,13 @@ export default function Students() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredStudents.map((student) => (
-                  <tr 
-                    key={student.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
+                  <tr
+                    key={student.id}
+                    className={"hover:bg-gray-50 cursor-pointer relative"}
                     onClick={() => openViewModal(student)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
+                    <td className={`py-4 whitespace-nowrap ${student.resit && student.resit.status === 'yes' ? 'pl-2' : 'px-6'}`}>
+                      <div className={`relative${student.resit && student.resit.status === 'yes' ? ' resit-bar' : ''}`}>
                         <div className="text-sm font-medium text-gray-900">{student.name}</div>
                         <div className="text-sm text-gray-500">ID: {student.id}</div>
                       </div>
@@ -282,6 +350,16 @@ export default function Students() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div className="flex items-center justify-center space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openResitModal(student);
+                          }}
+                          className="bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs border border-purple-300"
+                          title="Resit"
+                        >
+                          R
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -337,24 +415,25 @@ export default function Students() {
                 <User className="h-5 w-5 mr-2" />
                 Basic Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Full Name</label>
+                  <label className="text-sm font-medium text-gray-600">Admission Date</label>
+                  <p className="text-sm text-gray-900 flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    {viewingStudent.enrollmentDate ? new Date(viewingStudent.enrollmentDate).toLocaleDateString() : ''}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Student Name</label>
                   <p className="text-sm text-gray-900">{viewingStudent.name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Email</label>
-                  <p className="text-sm text-gray-900 flex items-center">
-                    <Mail className="h-4 w-4 mr-1" />
-                    {viewingStudent.email}
-                  </p>
+                  <label className="text-sm font-medium text-gray-600">Contact Number</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.phone}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Phone</label>
-                  <p className="text-sm text-gray-900 flex items-center">
-                    <Phone className="h-4 w-4 mr-1" />
-                    {viewingStudent.phone}
-                  </p>
+                  <label className="text-sm font-medium text-gray-600">Email ID</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.email}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Gender</label>
@@ -366,77 +445,46 @@ export default function Students() {
                     {viewingStudent.status}
                   </span>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Enrollment Date</label>
-                  <p className="text-sm text-gray-900 flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    {new Date(viewingStudent.enrollmentDate).toLocaleDateString()}
-                  </p>
-                </div>
               </div>
             </div>
 
-            {/* Address Information */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <MapPin className="h-5 w-5 mr-2" />
-                Address Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Address</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.address}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">City</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.city}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Postcode</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.postcode}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Location</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.location}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Course Information */}
+            {/* Course & Batch Information */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <BookOpen className="h-5 w-5 mr-2" />
-                Course Information
+                Course & Batch Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Batch Number</label>
+                  <label className="text-sm font-medium text-gray-600">Batch No</label>
                   <p className="text-sm text-gray-900">{viewingStudent.batchNo}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Course Type</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.courseType}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Admission Type</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.admissionType}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Vendor</label>
                   <p className="text-sm text-gray-900">{viewingStudent.vendor}</p>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-gray-600">Enrolled Courses</label>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {viewingStudent.courses.map((course, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
-                      >
-                        {course}
-                      </span>
-                    ))}
-                  </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Location</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.location}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Booked By</label>
+                  <p className="text-sm text-gray-900">
+                    {(() => {
+                      const b = viewingStudent.bookedBy as any;
+                      if (!b) return 'N/A';
+                      if (typeof b === 'object') {
+                        const name = b.name || '';
+                        const email = b.email ? `(${b.email})` : '';
+                        return (name + ' ' + email).trim() || 'N/A';
+                      }
+                      return b;
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Course Type</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.courseType}</p>
                 </div>
               </div>
             </div>
@@ -447,7 +495,7 @@ export default function Students() {
                 <FileText className="h-5 w-5 mr-2" />
                 Assignment Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-600">Assignment Status</label>
                   <span className={getAssignmentStatusBadge(viewingStudent.assignmentStatus)}>
@@ -458,59 +506,110 @@ export default function Students() {
                   <label className="text-sm font-medium text-gray-600">Assignment Date</label>
                   <p className="text-sm text-gray-900 flex items-center">
                     <Calendar className="h-4 w-4 mr-1" />
-                    {new Date(viewingStudent.assignmentDate).toLocaleDateString()}
+                    {viewingStudent.assignmentDate ? new Date(viewingStudent.assignmentDate).toLocaleDateString() : ''}
                   </p>
+                </div>
+                <div className="md:col-span-3">
+                  <label className="text-sm font-medium text-gray-600">Note</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.note}</p>
                 </div>
               </div>
             </div>
 
-            {/* Financial Information */}
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Payment Information */}
+            <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <DollarSign className="h-5 w-5 mr-2" />
-                Financial Information
+                Payment Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Course Fee</label>
-                  <p className="text-sm text-gray-900">${viewingStudent.courseFee}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Discount</label>
-                  <p className="text-sm text-gray-900">${viewingStudent.discount}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Total Paid</label>
-                  <p className="text-sm text-gray-900">${viewingStudent.totalPaid}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Received</label>
-                  <p className="text-sm text-gray-900">${viewingStudent.received}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Refund</label>
-                  <p className="text-sm text-gray-900">${viewingStudent.refund}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Balance Due</label>
-                  <p className="text-sm text-gray-900 font-semibold">${viewingStudent.balanceDue}</p>
+                  <label className="text-sm font-medium text-gray-600">Admission Type</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.admissionType}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Payment Slots</label>
                   <p className="text-sm text-gray-900">{viewingStudent.paymentSlots}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Booked By</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.bookedBy || 'N/A'}</p>
+                  <label className="text-sm font-medium text-gray-600">Course Fee</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.courseFee}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Discount</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.discount}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Total Paid</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.totalPaid}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Received</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.received}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Refund</label>
+                  <p className="text-sm text-gray-900">{viewingStudent.refund}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Balance Due</label>
+                  <p className="text-sm text-gray-900 font-semibold">{viewingStudent.balanceDue}</p>
                 </div>
               </div>
             </div>
 
-            {/* Additional Information */}
-            {viewingStudent.note && (
+            {/* Payment Plan Information */}
+            {viewingStudent.admissionType === 'price-plan' && (
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Notes</h3>
-                <p className="text-sm text-gray-900">{viewingStudent.note}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Payment Plan
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">#</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">Date</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">Amount</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">Received</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Array.isArray(viewingStudent.paymentPlan) && viewingStudent.paymentPlan.length > 0
+                        ? viewingStudent.paymentPlan
+                        : Array.from({ length: parseInt(viewingStudent.paymentSlots) || 1 }, () => ({ date: '', amount: 0, received: 0 }))
+                      ).map((row, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-2">{idx + 1}</td>
+                          <td className="px-4 py-2">{row.date ? new Date(row.date).toLocaleDateString() : ''}</td>
+                          <td className="px-4 py-2">{row.amount}</td>
+                          <td className="px-4 py-2">{row.received}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Resit/Retake Information */}
+            {viewingStudent.resit && (
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
+                  <Square className="h-5 w-5 mr-2 text-purple-600" />
+                  Resit (Retake) Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Batch</label>
+                    <p className="text-sm text-gray-900">{viewingStudent.resit.batch}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Status</label>
+                    <p className="text-sm text-gray-900">{viewingStudent.resit.status === 'yes' ? 'Yes' : 'No'}</p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -529,6 +628,44 @@ export default function Students() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Resit Modal */}
+      <Modal
+        isOpen={resitModalOpen}
+        onClose={closeResitModal}
+        title="Resit (Retake)"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
+            <Select
+              value={batchOptions.find(b => b.batchNo === resitBatch) ? { value: resitBatch, label: batchOptions.find(b => b.batchNo === resitBatch)?.batchNo + ' - ' + batchOptions.find(b => b.batchNo === resitBatch)?.subjectCourse } : null}
+              onChange={option => setResitBatch(option ? option.value : '')}
+              options={batchOptions.map(batch => ({ value: batch.batchNo, label: batch.batchNo + ' - ' + batch.subjectCourse }))}
+              isClearable
+              isSearchable
+              placeholder="Select batch..."
+              isLoading={loadingBatches}
+              classNamePrefix="react-select"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={resitStatus}
+              onChange={e => setResitStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div className="flex justify-end space-x-2 pt-2">
+            <Button variant="outline" onClick={closeResitModal}>Cancel</Button>
+            <Button onClick={handleResitSubmit} disabled={!resitBatch}>Save</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

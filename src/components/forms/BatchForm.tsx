@@ -76,21 +76,9 @@ export default function BatchForm({ onSubmit, onCancel, initialData }: BatchForm
   }, []);
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.batchNo.trim()) newErrors.batchNo = 'Batch number is required';
-    if (!formData.subjectCourse) newErrors.subjectCourse = 'Subject/Course is required';
-    if (!formData.startingDate) newErrors.startingDate = 'Starting date is required';
-    if (!formData.endingDate) newErrors.endingDate = 'Ending date is required';
-    
-    if (formData.startingDate && formData.endingDate) {
-      if (new Date(formData.startingDate) >= new Date(formData.endingDate)) {
-        newErrors.endingDate = 'Ending date must be after starting date';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // No required field validation
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

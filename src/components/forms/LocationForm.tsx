@@ -38,13 +38,9 @@ export default function LocationForm({ onSubmit, onCancel, initialData }: Locati
   }, [initialData]);
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.locationName.trim()) newErrors.locationName = 'Location name is required';
-    if (!formData.addressLine1.trim()) newErrors.addressLine1 = 'Address line 1 is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // No required field validation
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

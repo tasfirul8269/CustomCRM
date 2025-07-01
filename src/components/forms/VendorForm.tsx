@@ -65,14 +65,9 @@ export default function VendorForm({ onSubmit, onCancel, initialData }: VendorFo
   }, [initialData]);
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.vendorName.trim()) newErrors.vendorName = 'Vendor name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!initialData?.logo && !formData.logo) newErrors.logo = 'Logo is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // No required field validation
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

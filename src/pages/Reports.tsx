@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Search, Download, Users, Filter, Calendar, Building, MapPin, Phone, DollarSign, Printer } from 'lucide-react';
+import { Search, Download, Users, Filter, Calendar, Building, MapPin, Phone, DollarSign, Printer, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import Modal from '../components/ui/Modal';
 
 interface Student {
   _id: string;
@@ -16,6 +17,7 @@ interface Student {
   totalPaid: number;
   balanceDue: number;
   batchNo: string;
+  courses?: string[];
 }
 
 interface Batch {
@@ -31,17 +33,32 @@ interface Vendor {
   company: string;
 }
 
+interface Course {
+  id: string;
+  title: string;
+  courseCode: string;
+  assignmentDuration: number;
+  status: 'active' | 'inactive';
+}
+
 export default function Reports() {
   const [students, setStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
   // Filter states
   const [selectedBatch, setSelectedBatch] = useState<string>('All Batches');
   const [selectedVendor, setSelectedVendor] = useState<string>('All Vendors');
+  const [selectedCourse, setSelectedCourse] = useState<string>('All Courses');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [tempDateFrom, setTempDateFrom] = useState(dateFrom);
+  const [tempDateTo, setTempDateTo] = useState(dateTo);
 
   // Fetch all data
   const fetchData = async () => {
@@ -49,15 +66,17 @@ export default function Reports() {
       setLoading(true);
       setError('');
 
-      const [studentsRes, batchesRes, vendorsRes] = await Promise.all([
+      const [studentsRes, batchesRes, vendorsRes, coursesRes] = await Promise.all([
         api.get('/students'),
         api.get('/batches'),
         api.get('/vendors'),
+        api.get('/courses'),
       ]);
 
       setStudents(studentsRes.data);
       setBatches(batchesRes.data);
       setVendors(vendorsRes.data);
+      setCourses(coursesRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to load data');
@@ -70,22 +89,32 @@ export default function Reports() {
     fetchData();
   }, []);
 
-  // Filter students based on selected batch, vendor, and search term
+  // Filter students based on selected batch, vendor, course, date range, and search term
   const filteredStudents = students.filter(student => {
     // Batch filter
     const batchMatch = selectedBatch === 'All Batches' || student.batchNo === selectedBatch;
-    
     // Vendor filter
     const vendorMatch = selectedVendor === 'All Vendors' || student.vendor === selectedVendor;
-    
+    // Course filter (via batch)
+    const courseMatch = selectedCourse === 'All Courses' || (() => {
+      const batch = batches.find(b => b.batchNo === student.batchNo);
+      return batch && batch.subjectCourse === selectedCourse;
+    })();
+    // Admission date range filter
+    let dateMatch = true;
+    if (dateFrom) {
+      dateMatch = new Date(student.enrollmentDate) >= new Date(dateFrom);
+    }
+    if (dateTo && dateMatch) {
+      dateMatch = new Date(student.enrollmentDate) <= new Date(dateTo);
+    }
     // Search filter
     const searchMatch = 
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.location?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return batchMatch && vendorMatch && searchMatch;
+    return batchMatch && vendorMatch && courseMatch && dateMatch && searchMatch;
   });
 
   // Calculate summary statistics
@@ -156,12 +185,22 @@ export default function Reports() {
       yPosition += 7;
     }
     
+    if (selectedCourse !== 'All Courses') {
+      doc.text(`• Course: ${selectedCourse}`, 25, yPosition);
+      yPosition += 7;
+    }
+    
+    if (dateFrom || dateTo) {
+      doc.text(`• Admission Date Range: ${dateFrom ? `From: ${dateFrom}` : ''} ${dateTo ? `To: ${dateTo}` : ''}`, 25, yPosition);
+      yPosition += 7;
+    }
+    
     if (searchTerm) {
       doc.text(`• Search: "${searchTerm}"`, 25, yPosition);
       yPosition += 7;
     }
     
-    if (selectedBatch === 'All Batches' && selectedVendor === 'All Vendors' && !searchTerm) {
+    if (selectedBatch === 'All Batches' && selectedVendor === 'All Vendors' && selectedCourse === 'All Courses' && !dateFrom && !dateTo && !searchTerm) {
       doc.text('• No filters applied (showing all students)', 25, yPosition);
       yPosition += 7;
     }
@@ -323,26 +362,25 @@ export default function Reports() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-wrap gap-4 items-center overflow-x-auto pb-2">
             {/* Search */}
-            <div className="relative">
+            <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search students..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full min-w-0"
               />
             </div>
-
             {/* Batch Filter */}
-            <div className="relative">
+            <div className="relative flex-1 min-w-[180px]">
               <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <select
                 value={selectedBatch}
                 onChange={(e) => setSelectedBatch(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full appearance-none bg-white"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full min-w-0 appearance-none bg-white"
               >
                 <option>All Batches</option>
                 {batches.map(batch => (
@@ -352,14 +390,13 @@ export default function Reports() {
                 ))}
               </select>
             </div>
-
             {/* Vendor Filter */}
-            <div className="relative">
+            <div className="relative flex-1 min-w-[180px]">
               <Building className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <select
                 value={selectedVendor}
                 onChange={(e) => setSelectedVendor(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full appearance-none bg-white"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full min-w-0 appearance-none bg-white"
               >
                 <option>All Vendors</option>
                 {vendors.map(vendor => (
@@ -369,15 +406,49 @@ export default function Reports() {
                 ))}
               </select>
             </div>
+            {/* Course Filter */}
+            <div className="relative flex-1 min-w-[180px]">
+              <BookOpen className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full min-w-0 appearance-none bg-white"
+              >
+                <option>All Courses</option>
+                {courses.map(course => (
+                  <option key={course.id} value={course.title}>{course.title}</option>
+                ))}
+              </select>
+            </div>
+            {/* Date Range Picker Button */}
+            <div className="flex-1 min-w-[180px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setTempDateFrom(dateFrom);
+                  setTempDateTo(dateTo);
+                  setShowDateModal(true);
+                }}
+                className="w-full flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
+              >
+                <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
+                {dateFrom || dateTo
+                  ? `${dateFrom ? dateFrom : '...'} - ${dateTo ? dateTo : '...'}`
+                  : 'Pick date range'}
+              </button>
+            </div>
           </div>
 
           {/* Filter Summary */}
-          {(selectedBatch !== 'All Batches' || selectedVendor !== 'All Vendors' || searchTerm) && (
+          {(selectedBatch !== 'All Batches' || selectedVendor !== 'All Vendors' || searchTerm || selectedCourse !== 'All Courses' || dateFrom || dateTo) && (
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-700">
                 <strong>Active Filters:</strong>
                 {selectedBatch !== 'All Batches' && ` Batch: ${selectedBatch}`}
                 {selectedVendor !== 'All Vendors' && ` Vendor: ${selectedVendor}`}
+                {selectedCourse !== 'All Courses' && ` Course: ${selectedCourse}`}
+                {dateFrom && ` From: ${dateFrom}`}
+                {dateTo && ` To: ${dateTo}`}
                 {searchTerm && ` Search: "${searchTerm}"`}
                 <span className="ml-2 text-blue-600">
                   ({filteredStudents.length} students found)
@@ -387,6 +458,45 @@ export default function Reports() {
           )}
         </CardContent>
       </Card>
+
+      {/* Date Range Modal */}
+      <Modal isOpen={showDateModal} onClose={() => setShowDateModal(false)} title="Select Admission Date Range">
+        <div className="flex gap-4 mb-6">
+          <div className="flex flex-col flex-1">
+            <label className="mb-1 text-sm text-gray-600">From</label>
+            <input
+              type="date"
+              value={tempDateFrom}
+              onChange={e => setTempDateFrom(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col flex-1">
+            <label className="mb-1 text-sm text-gray-600">To</label>
+            <input
+              type="date"
+              value={tempDateTo}
+              onChange={e => setTempDateTo(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setShowDateModal(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              setShowDateModal(false);
+              setDateFrom(tempDateFrom);
+              setDateTo(tempDateTo);
+            }}
+            disabled={!!(tempDateFrom && tempDateTo && tempDateFrom > tempDateTo)}
+          >
+            Apply
+          </Button>
+        </div>
+      </Modal>
 
       {/* Students Table */}
       <Card>
