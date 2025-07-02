@@ -337,7 +337,7 @@ export default function Students() {
                     Location
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Courses
+                    Batch
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -374,7 +374,6 @@ export default function Students() {
                           : ''
                       }`}>
                         <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                        <div className="text-sm text-gray-500">ID: {student.id}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -386,22 +385,8 @@ export default function Students() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {student.location}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {student.courses.slice(0, 2).map((course, index) => (
-                          <span
-                            key={`${student.id}-course-${index}`}
-                            className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full"
-                          >
-                            {course}
-                          </span>
-                        ))}
-                        {student.courses.length > 2 && (
-                          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                            +{student.courses.length - 2} more
-                          </span>
-                        )}
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {student.batchNo}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={getStatusBadge(student.status)}>

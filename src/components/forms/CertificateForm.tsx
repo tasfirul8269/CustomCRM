@@ -21,6 +21,7 @@ interface CertificateFormData {
   status: 'pending' | 'issued' | 'dispatched';
   sentDate?: string;
   doorNumber?: string;
+  zipCode?: string;
 }
 
 interface CertificateFormProps {
@@ -38,6 +39,7 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
     status: 'pending',
     sentDate: '',
     doorNumber: '',
+    zipCode: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,6 +107,7 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
         status: initialData.status,
         sentDate: formatDateForInput(initialData.sentDate || ''),
         doorNumber: initialData.doorNumber || '',
+        zipCode: initialData.zipCode || '',
       });
     }
   }, [initialData]);
@@ -310,6 +313,21 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
             placeholder="Enter door number/address"
           />
           {errors.doorNumber && <p className="text-red-500 text-sm mt-1">{errors.doorNumber}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Zip code
+          </label>
+          <input
+            type="text"
+            value={formData.zipCode}
+            onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.zipCode ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="Enter zip code"
+          />
+          {errors.zipCode && <p className="text-red-500 text-sm mt-1">{errors.zipCode}</p>}
         </div>
       </div>
 
