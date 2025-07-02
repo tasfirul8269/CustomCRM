@@ -170,7 +170,6 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
   // Only update paymentPlan if the user changes slots/type after initial load
   useEffect(() => {
-    if (!didInit.current) return;
     if (
       formData.paymentSlots !== initialSlots ||
       formData.admissionType !== initialAdmissionType

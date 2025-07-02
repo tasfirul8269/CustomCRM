@@ -32,6 +32,10 @@ export interface Student {
     batch: string;
     status: string; // 'yes' or 'no'
   };
+  microtech?: {
+    batch: string;
+    status: string; // 'yes' or 'no'
+  };
 }
 
 export interface Course {

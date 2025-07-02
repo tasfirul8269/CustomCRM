@@ -17,6 +17,7 @@ export default function Students() {
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [specialFilter, setSpecialFilter] = useState('all'); // 'all', 'resit', 'microtech'
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -27,6 +28,10 @@ export default function Students() {
   const [batchOptions, setBatchOptions] = useState<Batch[]>([]);
   const [batchSearch, setBatchSearch] = useState('');
   const [loadingBatches, setLoadingBatches] = useState(false);
+  const [microtechModalOpen, setMicrotechModalOpen] = useState(false);
+  const [microtechStudent, setMicrotechStudent] = useState<Student | null>(null);
+  const [microtechBatch, setMicrotechBatch] = useState('');
+  const [microtechStatus, setMicrotechStatus] = useState('yes');
 
   // Fetch students from API
   const fetchStudents = async () => {
@@ -71,11 +76,17 @@ export default function Students() {
     if (resitModalOpen) fetchBatches(batchSearch);
   }, [resitModalOpen, batchSearch]);
 
+  useEffect(() => {
+    if (microtechModalOpen) fetchBatches(batchSearch);
+  }, [microtechModalOpen, batchSearch]);
+
   // Inject resit bar style into the document head
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `.resit-bar::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: #dc2626; border-radius: 3px 0 0 3px; }
-    .resit-bar > .text-sm { padding-left: 17px; }`;
+    .resit-bar > .text-sm { padding-left: 17px; }
+    .microtech-bar::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: #2563eb; border-radius: 3px 0 0 3px; }
+    .microtech-bar > .text-sm { padding-left: 17px; }`;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
   }, []);
@@ -84,7 +95,13 @@ export default function Students() {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    let matchesSpecial = true;
+    if (specialFilter === 'resit') {
+      matchesSpecial = !!(student.resit && student.resit.status === 'yes');
+    } else if (specialFilter === 'microtech') {
+      matchesSpecial = !!(student.microtech && student.microtech.status === 'yes');
+    }
+    return matchesSearch && matchesStatus && matchesSpecial;
   });
 
   const handleAddStudent = async (studentData: Omit<Student, 'id'>) => {
@@ -183,6 +200,30 @@ export default function Students() {
     closeResitModal();
   };
 
+  const openMicrotechModal = (student: Student) => {
+    setMicrotechStudent(student);
+    setMicrotechBatch(student.microtech?.batch || '');
+    setMicrotechStatus(student.microtech?.status || 'yes');
+    setMicrotechModalOpen(true);
+  };
+
+  const closeMicrotechModal = () => {
+    setMicrotechModalOpen(false);
+    setMicrotechStudent(null);
+    setMicrotechBatch('');
+    setMicrotechStatus('yes');
+    setBatchSearch('');
+  };
+
+  const handleMicrotechSubmit = async () => {
+    if (!microtechStudent) return;
+    await api.patch(`/students/${microtechStudent.id}`, { microtech: { batch: microtechBatch, status: microtechStatus } })
+      .then((res: any) => console.log('PATCH /students/:id response:', res.data))
+      .catch((err: any) => console.error('PATCH /students/:id error:', err));
+    fetchStudents();
+    closeMicrotechModal();
+  };
+
   const getStatusBadge = (status: Student['status']) => {
     const styles = {
       active: 'bg-green-100 text-green-800',
@@ -249,7 +290,6 @@ export default function Students() {
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -259,6 +299,15 @@ export default function Students() {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="graduated">Graduated</option>
+              </select>
+              <select
+                value={specialFilter}
+                onChange={e => setSpecialFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All</option>
+                <option value="resit">Resit</option>
+                <option value="microtech">Micro Tech</option>
               </select>
             </div>
           </div>
@@ -308,8 +357,22 @@ export default function Students() {
                     className={"hover:bg-gray-50 cursor-pointer relative"}
                     onClick={() => openViewModal(student)}
                   >
-                    <td className={`py-4 whitespace-nowrap ${student.resit && student.resit.status === 'yes' ? 'pl-2' : 'px-6'}`}>
-                      <div className={`relative${student.resit && student.resit.status === 'yes' ? ' resit-bar' : ''}`}>
+                    <td className={`py-4 whitespace-nowrap ${
+                      student.resit && student.resit.status === 'yes'
+                        ? 'pl-2'
+                        : student.microtech && student.microtech.status === 'yes'
+                        ? 'pl-2'
+                        : 'px-6'
+                    }`}>
+                      <div className={`relative${
+                        student.resit && student.resit.status === 'yes' && student.microtech && student.microtech.status === 'yes'
+                          ? ' resit-bar microtech-bar'
+                          : student.resit && student.resit.status === 'yes'
+                          ? ' resit-bar'
+                          : student.microtech && student.microtech.status === 'yes'
+                          ? ' microtech-bar'
+                          : ''
+                      }`}>
                         <div className="text-sm font-medium text-gray-900">{student.name}</div>
                         <div className="text-sm text-gray-500">ID: {student.id}</div>
                       </div>
@@ -359,6 +422,16 @@ export default function Students() {
                           title="Resit"
                         >
                           R
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openMicrotechModal(student);
+                          }}
+                          className="bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs border border-blue-300"
+                          title="Micro Tech"
+                        >
+                          M
                         </button>
                         <button
                           onClick={(e) => {
@@ -613,6 +686,26 @@ export default function Students() {
               </div>
             )}
 
+            {/* Micro Tech Information */}
+            {viewingStudent.microtech && (
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                  <Square className="h-5 w-5 mr-2 text-blue-600" />
+                  Micro Tech Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Batch</label>
+                    <p className="text-sm text-gray-900">{viewingStudent.microtech.batch}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Status</label>
+                    <p className="text-sm text-gray-900">{viewingStudent.microtech.status === 'yes' ? 'Yes' : 'No'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
               <Button variant="outline" onClick={closeViewModal}>
                 Close
@@ -664,6 +757,44 @@ export default function Students() {
           <div className="flex justify-end space-x-2 pt-2">
             <Button variant="outline" onClick={closeResitModal}>Cancel</Button>
             <Button onClick={handleResitSubmit} disabled={!resitBatch}>Save</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Micro Tech Modal */}
+      <Modal
+        isOpen={microtechModalOpen}
+        onClose={closeMicrotechModal}
+        title="Micro Tech"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
+            <Select
+              value={batchOptions.find(b => b.batchNo === microtechBatch) ? { value: microtechBatch, label: batchOptions.find(b => b.batchNo === microtechBatch)?.batchNo + ' - ' + batchOptions.find(b => b.batchNo === microtechBatch)?.subjectCourse } : null}
+              onChange={option => setMicrotechBatch(option ? option.value : '')}
+              options={batchOptions.map(batch => ({ value: batch.batchNo, label: batch.batchNo + ' - ' + batch.subjectCourse }))}
+              isClearable
+              isSearchable
+              placeholder="Select batch..."
+              isLoading={loadingBatches}
+              classNamePrefix="react-select"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={microtechStatus}
+              onChange={e => setMicrotechStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div className="flex justify-end space-x-2 pt-2">
+            <Button variant="outline" onClick={closeMicrotechModal}>Cancel</Button>
+            <Button onClick={handleMicrotechSubmit} disabled={!microtechBatch}>Save</Button>
           </div>
         </div>
       </Modal>
