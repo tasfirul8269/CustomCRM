@@ -265,7 +265,7 @@ export default function Certifications() {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingCertificate ? 'Edit Certificate' : 'Issue New Certificate'}
+        title={editingCertificate ? 'Edit Certificate' : 'Certificate Dispatch Record'}
       >
         <CertificateForm 
           onSubmit={editingCertificate ? handleEditCertificate : handleAddCertificate}

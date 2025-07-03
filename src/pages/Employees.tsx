@@ -436,7 +436,7 @@ export default function Employees() {
             {viewingEmployee.note && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Notes</h3>
-                <p className="text-sm text-gray-900">{viewingEmployee.note}</p>
+                <pre className="text-sm text-gray-900 whitespace-pre-wrap break-words">{viewingEmployee.note}</pre>
               </div>
             )}
 
