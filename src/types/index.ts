@@ -101,7 +101,7 @@ export interface Vendor {
 }
 
 export interface Location {
-  id: string;
+  _id: string;
   name: string;
   locationName: string;
   addressLine1: string;

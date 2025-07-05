@@ -57,7 +57,7 @@ export default function Locations() {
       setMessage('');
       setError('');
       if (editingLocation) {
-        await api.patch(`/locations/${editingLocation.id}`, locationData);
+        await api.patch(`/locations/${editingLocation._id}`, locationData);
         setMessage('Location updated successfully!');
         fetchLocations(); // Refresh the list
     setIsModalOpen(false);
@@ -214,7 +214,7 @@ export default function Locations() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
         {filteredLocations.map((location) => (
-                  <tr key={location.id} className="hover:bg-gray-50">
+                  <tr key={location._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{location.locationName || location.name}</div>
                     </td>
@@ -240,7 +240,7 @@ export default function Locations() {
                       <Edit className="h-4 w-4" />
                     </button>
                         <button
-                          onClick={() => handleDeleteLocation(location.id)}
+                          onClick={() => handleDeleteLocation(location._id)}
                           className="text-red-600 hover:text-red-900"
                         >
                       <Trash2 className="h-4 w-4" />
