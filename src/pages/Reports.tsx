@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Search, Download, Users, Filter, Calendar, Building, MapPin, Phone, DollarSign, Printer, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
+import { Search, Download, Users, Filter, Calendar, Building, MapPin, Phone, PoundSterling, Printer, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -132,8 +132,8 @@ export default function Reports() {
         student.vendor || '',
         student.location || '',
         new Date(student.enrollmentDate).toLocaleDateString(),
-        (student.totalPaid || 0).toString(),
-        (student.balanceDue || 0).toString(),
+        `£${(student.totalPaid || 0).toString()}`,
+        `£${(student.balanceDue || 0).toString()}`,
       ])
     ];
 
@@ -216,9 +216,9 @@ export default function Reports() {
     yPosition += 7;
     doc.text(`• Total Students: ${totalStudents}`, 25, yPosition);
     yPosition += 7;
-    doc.text(`• Total Paid: ${totalPaid.toLocaleString()}`, 25, yPosition);
+    doc.text(`• Total Paid: £${totalPaid.toLocaleString()}`, 25, yPosition);
     yPosition += 7;
-    doc.text(`• Total Balance: ${totalBalance.toLocaleString()}`, 25, yPosition);
+    doc.text(`• Total Balance: £${totalBalance.toLocaleString()}`, 25, yPosition);
     
     // Prepare table data
     const tableData = filteredStudents.map(student => [
@@ -227,8 +227,8 @@ export default function Reports() {
       student.vendor || 'N/A',
       student.location || 'N/A',
       new Date(student.enrollmentDate).toLocaleDateString(),
-      (student.totalPaid || 0).toLocaleString(),
-      (student.balanceDue || 0).toLocaleString(),
+      `£${(student.totalPaid || 0).toLocaleString()}`,
+      `£${(student.balanceDue || 0).toLocaleString()}`,
     ]);
     
     // Add table
@@ -328,11 +328,11 @@ export default function Reports() {
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-600" />
+                <PoundSterling className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Paid</p>
-                <p className="text-2xl font-bold text-gray-900">{totalPaid.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">£{totalPaid.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -342,11 +342,11 @@ export default function Reports() {
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="p-2 bg-red-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-red-600" />
+                <PoundSterling className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Balance</p>
-                <p className="text-2xl font-bold text-gray-900">{totalBalance.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">£{totalBalance.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -574,12 +574,12 @@ export default function Reports() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-green-600">
-                          {(student.totalPaid || 0).toLocaleString()}
+                          £{(student.totalPaid || 0).toLocaleString()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-red-600">
-                          {(student.balanceDue || 0).toLocaleString()}
+                          £{(student.balanceDue || 0).toLocaleString()}
                         </div>
                       </td>
                     </tr>

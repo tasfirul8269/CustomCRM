@@ -4,7 +4,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import StudentAdmissionForm from '../components/forms/StudentAdmissionForm';
 import { Student } from '../types';
-import { Plus, Search, Eye, Edit, Trash2, Calendar, MapPin, Phone, Mail, DollarSign, User, BookOpen, FileText, CreditCard, Square } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Calendar, MapPin, Phone, Mail, PoundSterling, User, BookOpen, FileText, CreditCard, Square } from 'lucide-react';
 import api from '../services/api';
 import { Batch } from '../types/batch';
 import Select from 'react-select';
@@ -394,7 +394,7 @@ export default function Students() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${student.totalPaid}
+                      £{student.totalPaid}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div className="flex items-center justify-center space-x-2">
@@ -577,7 +577,7 @@ export default function Students() {
             {/* Payment Information */}
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <DollarSign className="h-5 w-5 mr-2" />
+                <PoundSterling className="h-5 w-5 mr-2" />
                 Payment Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -599,7 +599,7 @@ export default function Students() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Total Paid</label>
-                  <p className="text-sm text-gray-900">{viewingStudent.totalPaid}</p>
+                  <p className="text-sm text-gray-900">£{viewingStudent.totalPaid}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Received</label>
@@ -611,7 +611,7 @@ export default function Students() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Balance Due</label>
-                  <p className="text-sm text-gray-900 font-semibold">{viewingStudent.balanceDue}</p>
+                  <p className="text-sm text-gray-900 font-semibold">£{viewingStudent.balanceDue}</p>
                 </div>
               </div>
             </div>

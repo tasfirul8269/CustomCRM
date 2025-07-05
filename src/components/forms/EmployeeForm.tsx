@@ -165,7 +165,7 @@ export default function EmployeeForm({
         {/* Photo Upload */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Photo <span className="text-red-500">*</span>
+            Photo
           </label>
           <div className="flex items-center">
             <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
@@ -194,7 +194,7 @@ export default function EmployeeForm({
         {/* Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-            Email <span className="text-red-500">*</span>
+            Email
           </label>
           <input
             type="email"
@@ -206,7 +206,6 @@ export default function EmployeeForm({
               errors?.email ? 'border-red-500' : 'border-gray-300'
             }`}
             placeholder="Enter email address"
-            required
           />
           {errors?.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
         </div>
@@ -214,7 +213,7 @@ export default function EmployeeForm({
         {/* Mobile Number */}
         <div className="col-span-1">
           <label htmlFor="mobileNumber" className="block text-sm font-medium text-gray-700">
-            Mobile Number <span className="text-red-500">*</span>
+            Mobile Number
           </label>
           <input
             type="tel"
@@ -223,14 +222,13 @@ export default function EmployeeForm({
             value={formData.mobileNumber}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            required
           />
         </div>
 
         {/* Full Name */}
         <div className="col-span-1">
           <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-            Full Name <span className="text-red-500">*</span>
+            Full Name
           </label>
           <input
             type="text"
@@ -239,14 +237,13 @@ export default function EmployeeForm({
             value={formData.fullName}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            required
           />
         </div>
 
         {/* Date of Birth */}
         <div className="col-span-1">
           <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
-            Date of Birth <span className="text-red-500">*</span>
+            Date of Birth
           </label>
           <input
             type="date"
@@ -255,14 +252,13 @@ export default function EmployeeForm({
             value={formData.dateOfBirth}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            required
           />
         </div>
 
         {/* License Number */}
         <div className="col-span-1">
           <label htmlFor="licenseNumber" className="block text-sm font-medium text-gray-700">
-            License No. <span className="text-red-500">*</span>
+            License No.
           </label>
           <input
             type="text"
@@ -271,14 +267,13 @@ export default function EmployeeForm({
             value={formData.licenseNumber}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            required
           />
         </div>
 
         {/* Address Line 1 */}
         <div className="col-span-1">
           <label htmlFor="addressLine1" className="block text-sm font-medium text-gray-700">
-            Address Line 1 <span className="text-red-500">*</span>
+            Address Line 1
           </label>
           <input
             type="text"
@@ -287,7 +282,6 @@ export default function EmployeeForm({
             value={formData.addressLine1}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            required
           />
         </div>
 
@@ -344,7 +338,7 @@ export default function EmployeeForm({
         {/* Joining Date */}
         <div className="col-span-1">
           <label htmlFor="joiningDate" className="block text-sm font-medium text-gray-700">
-            Joining Date <span className="text-red-500">*</span>
+            Joining Date
           </label>
           <input
             type="date"
@@ -353,7 +347,6 @@ export default function EmployeeForm({
             value={formData.joiningDate}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            required
           />
         </div>
 
@@ -375,7 +368,7 @@ export default function EmployeeForm({
         {/* Signature Upload */}
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Signature <span className="text-red-500">*</span>
+            Signature
           </label>
           <div className="mt-1">
             {signaturePreview ? (
@@ -417,7 +410,7 @@ export default function EmployeeForm({
         {/* Gender */}
         <div className="col-span-1">
           <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
-            Gender <span className="text-red-500">*</span>
+            Gender
           </label>
           <select
             id="gender"
@@ -425,7 +418,6 @@ export default function EmployeeForm({
             value={formData.gender}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            required
           >
             <option value="">Select Gender</option>
             <option value="Male">Male</option>
@@ -454,7 +446,7 @@ export default function EmployeeForm({
       {/* Note */}
       <div className="col-span-2">
         <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-2">
-          Note (Minimum 200 characters) <span className="text-red-500">*</span>
+          Note
         </label>
         <textarea
           id="note"
@@ -465,15 +457,10 @@ export default function EmployeeForm({
           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors?.note ? 'border-red-500' : 'border-gray-300'
           }`}
-          placeholder="Enter notes here (minimum 200 characters)"
-          minLength={200}
-          required
+          placeholder="Enter notes here"
         />
         <div className="flex justify-between mt-1">
           {errors?.note && <p className="text-red-500 text-sm">{errors.note}</p>}
-          <p className="text-sm text-gray-500 ml-auto">
-            {formData.note.length}/200 characters minimum
-          </p>
         </div>
       </div>
 
@@ -491,7 +478,7 @@ export default function EmployeeForm({
         <Button
           type="submit"
           variant="primary"
-          disabled={isLoading || (!initialData?.note && formData.note.length < 200)}
+          disabled={isLoading}
           className="px-4 py-2"
         >
           {isLoading ? 'Saving...' : 'Save Employee'}

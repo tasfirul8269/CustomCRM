@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { Course } from '../types';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Users, DollarSign, Clock, ChevronDown } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Users, Clock, ChevronDown } from 'lucide-react';
 import api from '../services/api';
 
 export default function Courses() {

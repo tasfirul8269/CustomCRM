@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Plus, Search, Filter, Edit, Trash2, ChevronDown, Mail, Phone, MapPin, Building, Calendar, FileText, DollarSign, User, Globe, CreditCard } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, ChevronDown, Mail, Phone, MapPin, Building, Calendar, FileText, PoundSterling, User, Globe, CreditCard } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import VendorForm from '../components/forms/VendorForm';
 import { Vendor } from '../types/vendor';
@@ -490,8 +490,8 @@ export default function Vendors() {
                 <div>
                   <label className="text-sm font-medium text-gray-600">Contract Value</label>
                   <p className="text-sm text-gray-900 flex items-center">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    ${viewingVendor.contractValue}
+                    <PoundSterling className="h-4 w-4 mr-1" />
+                    £{viewingVendor.contractValue}
                   </p>
                 </div>
                 <div>
