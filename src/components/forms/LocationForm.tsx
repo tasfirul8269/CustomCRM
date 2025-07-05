@@ -54,7 +54,7 @@ export default function LocationForm({ onSubmit, onCancel, initialData }: Locati
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Location Name *
+          Location Name
         </label>
         <input
           type="text"
@@ -70,7 +70,7 @@ export default function LocationForm({ onSubmit, onCancel, initialData }: Locati
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Address Line 1 *
+          Address Line 1
         </label>
         <input
           type="text"

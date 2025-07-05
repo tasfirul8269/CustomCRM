@@ -55,7 +55,7 @@ export default function CourseForm({ onSubmit, onCancel, initialData }: CourseFo
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Title *
+            Course Title
           </label>
           <input
             type="text"
@@ -71,7 +71,7 @@ export default function CourseForm({ onSubmit, onCancel, initialData }: CourseFo
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Code *
+            Course Code
           </label>
           <input
             type="text"
@@ -87,7 +87,7 @@ export default function CourseForm({ onSubmit, onCancel, initialData }: CourseFo
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Assignment Duration (Days) *
+            Assignment Duration (Days)
           </label>
           <input
             type="number"
@@ -104,7 +104,7 @@ export default function CourseForm({ onSubmit, onCancel, initialData }: CourseFo
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Published *
+            Published
           </label>
           <div className="flex items-center space-x-4">
             <label className="flex items-center">

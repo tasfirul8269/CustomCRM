@@ -93,7 +93,7 @@ export default function BatchForm({ onSubmit, onCancel, initialData }: BatchForm
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Batch No *
+            Batch No
           </label>
           <input
             type="text"
@@ -109,7 +109,7 @@ export default function BatchForm({ onSubmit, onCancel, initialData }: BatchForm
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Subject/Course *
+            Subject/Course
           </label>
           <select
             value={formData.subjectCourse}
@@ -131,7 +131,7 @@ export default function BatchForm({ onSubmit, onCancel, initialData }: BatchForm
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Starting Date *
+            Starting Date
           </label>
           <input
             type="date"
@@ -146,7 +146,7 @@ export default function BatchForm({ onSubmit, onCancel, initialData }: BatchForm
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ending Date *
+            Ending Date
           </label>
           <input
             type="date"

@@ -119,7 +119,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         batchNo: initialData.batchNo || '',
         vendor: initialData.vendor || '',
         location: initialData.location || '',
-        bookedBy: typeof initialData.bookedBy === 'object' ? initialData.bookedBy?._id || '' : initialData.bookedBy || '',
+        bookedBy: typeof initialData.bookedBy === 'object' ? (initialData.bookedBy as any)?._id || '' : initialData.bookedBy || '',
         courseType: initialData.courseType || '',
         assignmentStatus: initialData.assignmentStatus || 'pending',
         assignmentDate: (function() {
@@ -211,6 +211,9 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         courses: [], // Will be populated based on batch/course selection
         totalPaid: formData.totalPaid,
         // Additional fields for the extended student model
+        address: '', // Default empty value
+        city: '', // Default empty value
+        postcode: '', // Default empty value
         gender: formData.gender,
         batchNo: formData.batchNo,
         vendor: formData.vendor,
@@ -228,6 +231,9 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         bookedBy: formData.bookedBy,
         // Add paymentPlan if price-plan
         ...(formData.admissionType === 'price-plan' ? { paymentPlan } : {}),
+        // Optional fields with default values
+        resit: undefined,
+        microtech: undefined,
       };
       onSubmit(newStudent);
     }
@@ -250,7 +256,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Admission Date *
+              Admission Date
             </label>
             <input
               type="date"
@@ -262,7 +268,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Student Name *
+              Student Name
             </label>
             <input
               type="text"
@@ -278,7 +284,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Contact Number *
+              Contact Number
             </label>
             <input
               type="tel"
@@ -294,7 +300,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email ID *
+              Email ID
             </label>
             <input
               type="email"
@@ -310,7 +316,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gender *
+              Gender
             </label>
             <select
               value={formData.gender}
@@ -350,7 +356,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Batch No *
+              Batch No
             </label>
             <select
               value={formData.batchNo}
@@ -372,7 +378,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Vendor *
+              Vendor
             </label>
             <select
               value={formData.vendor}
@@ -394,7 +400,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Location *
+              Location
             </label>
             <select
               value={formData.location}
@@ -436,7 +442,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Course Type *
+              Course Type
             </label>
             <select
               value={formData.courseType}
@@ -500,7 +506,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Admission Type *
+              Admission Type
             </label>
             <select
               value={formData.admissionType}

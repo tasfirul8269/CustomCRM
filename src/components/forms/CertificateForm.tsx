@@ -155,7 +155,7 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
         {/* Student Autocomplete */}
         <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Student *
+            Student
           </label>
           <input
             ref={studentInputRef}
@@ -196,7 +196,7 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
         {/* Course Autocomplete */}
         <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course *
+            Course
           </label>
           <input
             ref={courseInputRef}
@@ -237,7 +237,7 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Issue Date (DD/MM/YYYY) *
+            Issue Date (DD/MM/YYYY)
           </label>
           <input
             type="date"
@@ -252,7 +252,7 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Certificate Number *
+            Certificate Number
           </label>
           <input
             type="text"
@@ -268,7 +268,7 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Status *
+            Status
           </label>
           <select
             value={formData.status}

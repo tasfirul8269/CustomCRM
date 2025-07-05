@@ -97,7 +97,7 @@ export default function VendorForm({ onSubmit, onCancel, initialData }: VendorFo
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Logo *
+            Logo
           </label>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
             <input
@@ -120,7 +120,7 @@ export default function VendorForm({ onSubmit, onCancel, initialData }: VendorFo
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Vendor Name *
+            Vendor Name
           </label>
           <input
             type="text"
@@ -241,7 +241,7 @@ export default function VendorForm({ onSubmit, onCancel, initialData }: VendorFo
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Published *
+            Published
           </label>
           <div className="flex items-center space-x-4">
             <label className="flex items-center">
