@@ -451,6 +451,7 @@ export default function Students() {
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingStudent ? 'Edit Student' : 'Add New Student'}
+        className="max-w-3xl"
       >
         <StudentAdmissionForm
           onSubmit={editingStudent ? handleEditStudent : handleAddStudent}
@@ -718,9 +719,12 @@ export default function Students() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
             <Select
-              value={batchOptions.find(b => b.batchNo === resitBatch) ? { value: resitBatch, label: batchOptions.find(b => b.batchNo === resitBatch)?.batchNo + ' - ' + batchOptions.find(b => b.batchNo === resitBatch)?.subjectCourse } : null}
+              value={batchOptions.find(b => b.batchNo === resitBatch) ? { value: resitBatch, label: `${batchOptions.find(b => b.batchNo === resitBatch)?.batchNo} : ${new Date(batchOptions.find(b => b.batchNo === resitBatch)?.startingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batchOptions.find(b => b.batchNo === resitBatch)?.endingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}` } : null}
               onChange={option => setResitBatch(option ? option.value : '')}
-              options={batchOptions.map(batch => ({ value: batch.batchNo, label: batch.batchNo + ' - ' + batch.subjectCourse }))}
+              options={batchOptions.map(batch => ({
+                value: batch.batchNo,
+                label: `${batch.batchNo} : ${new Date(batch.startingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batch.endingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+              }))}
               isClearable
               isSearchable
               placeholder="Select batch..."
@@ -756,9 +760,12 @@ export default function Students() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
             <Select
-              value={batchOptions.find(b => b.batchNo === microtechBatch) ? { value: microtechBatch, label: batchOptions.find(b => b.batchNo === microtechBatch)?.batchNo + ' - ' + batchOptions.find(b => b.batchNo === microtechBatch)?.subjectCourse } : null}
+              value={batchOptions.find(b => b.batchNo === microtechBatch) ? { value: microtechBatch, label: `${batchOptions.find(b => b.batchNo === microtechBatch)?.batchNo} : ${new Date(batchOptions.find(b => b.batchNo === microtechBatch)?.startingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batchOptions.find(b => b.batchNo === microtechBatch)?.endingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}` } : null}
               onChange={option => setMicrotechBatch(option ? option.value : '')}
-              options={batchOptions.map(batch => ({ value: batch.batchNo, label: batch.batchNo + ' - ' + batch.subjectCourse }))}
+              options={batchOptions.map(batch => ({
+                value: batch.batchNo,
+                label: `${batch.batchNo} : ${new Date(batch.startingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batch.endingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+              }))}
               isClearable
               isSearchable
               placeholder="Select batch..."

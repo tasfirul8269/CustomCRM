@@ -3,6 +3,7 @@ import Button from '../ui/Button';
 import { Batch } from '../../types/batch';
 import { Course } from '../../types';
 import api from '../../services/api';
+import Select from 'react-select';
 
 interface BatchFormData {
   batchNo: string;
@@ -111,21 +112,22 @@ export default function BatchForm({ onSubmit, onCancel, initialData }: BatchForm
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Subject/Course
           </label>
-          <select
-            value={formData.subjectCourse}
-            onChange={(e) => setFormData(prev => ({ ...prev, subjectCourse: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.subjectCourse ? 'border-red-500' : 'border-gray-300'
-            }`}
-            disabled={loadingCourses}
-          >
-            <option value="">{loadingCourses ? 'Loading courses...' : 'Select course'}</option>
-            {courses.map((course, index) => (
-              <option key={course.id || `course-${index}`} value={course.title}>
-                {course.title} ({course.courseCode})
-              </option>
-            ))}
-          </select>
+          <Select
+            value={courses.find(c => c.title === formData.subjectCourse) ? {
+              value: formData.subjectCourse,
+              label: `${courses.find(c => c.title === formData.subjectCourse)?.title} (${courses.find(c => c.title === formData.subjectCourse)?.courseCode})`
+            } : null}
+            onChange={option => setFormData(prev => ({ ...prev, subjectCourse: option ? option.value : '' }))}
+            options={courses.map(course => ({
+              value: course.title,
+              label: `${course.title} (${course.courseCode})`
+            }))}
+            isClearable
+            isSearchable
+            placeholder={loadingCourses ? 'Loading courses...' : 'Select course'}
+            isLoading={loadingCourses}
+            classNamePrefix="react-select"
+          />
           {errors.subjectCourse && <p className="text-red-500 text-sm mt-1">{errors.subjectCourse}</p>}
         </div>
 

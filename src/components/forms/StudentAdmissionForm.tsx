@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../ui/Button';
 import { Student, Vendor, Batch, Location } from '../../types';
+import { Employee } from '../../types/employee';
 import api from '../../services/api';
+import Select from 'react-select';
 
 interface StudentAdmissionFormProps {
   onSubmit: (student: Omit<Student, 'id'>) => void;
@@ -36,15 +38,18 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
     received: 0,
     refund: 0,
     balanceDue: 0,
+    employeeId: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadingVendors, setLoadingVendors] = useState(true);
   const [loadingBatches, setLoadingBatches] = useState(true);
   const [loadingLocations, setLoadingLocations] = useState(true);
+  const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [paymentPlan, setPaymentPlan] = useState<{ date: string; amount: number; received: number }[]>([{ date: '', amount: 0, received: 0 }]);
   const didInit = useRef(false);
   const [initialSlots, setInitialSlots] = useState('');
@@ -87,11 +92,24 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      setLoadingEmployees(true);
+      const response = await api.get('/employees');
+      setEmployees(response.data);
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
+
   // Fetch data on component mount
   useEffect(() => {
     fetchVendors();
     fetchBatches();
     fetchLocations();
+    fetchEmployees();
   }, []);
 
   // Initialize form with initial data if editing
@@ -139,6 +157,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         received: initialData.received || 0,
         refund: initialData.refund || 0,
         balanceDue: initialData.balanceDue || 0,
+        employeeId: initialData.employeeId || '',
       });
       if (Array.isArray(initialData.paymentPlan) && initialData.paymentPlan.length > 0) {
         setPaymentPlan(initialData.paymentPlan.map(row => {
@@ -229,6 +248,7 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
         refund: formData.refund,
         balanceDue: formData.balanceDue,
         bookedBy: formData.bookedBy,
+        employeeId: formData.employeeId,
         // Add paymentPlan if price-plan
         ...(formData.admissionType === 'price-plan' ? { paymentPlan } : {}),
         // Optional fields with default values
@@ -318,18 +338,15 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Gender
             </label>
-            <select
-              value={formData.gender}
-              onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.gender ? 'border-red-500' : 'border-gray-300'
-              }`}
-            >
-              <option value="">Select gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
+            <Select
+              value={formData.gender ? { value: formData.gender, label: formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1) } : null}
+              onChange={option => setFormData(prev => ({ ...prev, gender: option ? option.value : '' }))}
+              options={['male', 'female', 'other'].map(g => ({ value: g, label: g.charAt(0).toUpperCase() + g.slice(1) }))}
+              isClearable
+              isSearchable
+              placeholder="Select gender"
+              classNamePrefix="react-select"
+            />
             {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
           </div>
 
@@ -358,21 +375,22 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Batch No
             </label>
-            <select
-              value={formData.batchNo}
-              onChange={(e) => setFormData(prev => ({ ...prev, batchNo: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.batchNo ? 'border-red-500' : 'border-gray-300'
-              }`}
-              disabled={loadingBatches}
-            >
-              <option value="">{loadingBatches ? 'Loading batches...' : 'Select batch'}</option>
-              {batches.map((batch) => (
-                <option key={batch.id || (batch as any)._id} value={batch.batchNo}>
-                  {batch.batchNo} - {batch.subjectCourse}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={batches.find(b => b.batchNo === formData.batchNo) ? {
+                value: formData.batchNo,
+                label: `${batches.find(b => b.batchNo === formData.batchNo)?.batchNo} : ${new Date(batches.find(b => b.batchNo === formData.batchNo)?.startingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batches.find(b => b.batchNo === formData.batchNo)?.endingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+              } : null}
+              onChange={option => setFormData(prev => ({ ...prev, batchNo: option ? option.value : '' }))}
+              options={batches.map(batch => ({
+                value: batch.batchNo,
+                label: `${batch.batchNo} : ${new Date(batch.startingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batch.endingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+              }))}
+              isClearable
+              isSearchable
+              placeholder={loadingBatches ? 'Loading batches...' : 'Select batch'}
+              isLoading={loadingBatches}
+              classNamePrefix="react-select"
+            />
             {errors.batchNo && <p className="text-red-500 text-sm mt-1">{errors.batchNo}</p>}
           </div>
 
@@ -380,21 +398,24 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Vendor
             </label>
-            <select
-              value={formData.vendor}
-              onChange={(e) => setFormData(prev => ({ ...prev, vendor: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.vendor ? 'border-red-500' : 'border-gray-300'
-              }`}
-              disabled={loadingVendors}
-            >
-              <option value="">{loadingVendors ? 'Loading vendors...' : 'Select vendor'}</option>
-              {vendors.map((vendor) => (
-                <option key={vendor.id || (vendor as any)._id} value={vendor.name}>
-                  {vendor.name} - {vendor.company}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={vendors.find(v => v.name === formData.vendor) ? {
+                value: formData.vendor,
+                label: vendors.find(v => v.name === formData.vendor)?.company
+                  ? `${vendors.find(v => v.name === formData.vendor)?.name} - ${vendors.find(v => v.name === formData.vendor)?.company}`
+                  : vendors.find(v => v.name === formData.vendor)?.name
+              } : null}
+              onChange={option => setFormData(prev => ({ ...prev, vendor: option ? option.value : '' }))}
+              options={vendors.map(vendor => ({
+                value: vendor.name,
+                label: vendor.company ? `${vendor.name} - ${vendor.company}` : vendor.name
+              }))}
+              isClearable
+              isSearchable
+              placeholder={loadingVendors ? 'Loading vendors...' : 'Select vendor'}
+              isLoading={loadingVendors}
+              classNamePrefix="react-select"
+            />
             {errors.vendor && <p className="text-red-500 text-sm mt-1">{errors.vendor}</p>}
           </div>
 
@@ -402,21 +423,22 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Location
             </label>
-            <select
-              value={formData.location}
-              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.location ? 'border-red-500' : 'border-gray-300'
-              }`}
-              disabled={loadingLocations}
-            >
-              <option value="">{loadingLocations ? 'Loading locations...' : 'Select location'}</option>
-              {locations.map((location) => (
-                <option key={location.id || (location as any)._id} value={location.locationName}>
-                  {location.locationName}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={locations.find(l => l.locationName === formData.location) ? {
+                value: formData.location,
+                label: locations.find(l => l.locationName === formData.location)?.locationName
+              } : null}
+              onChange={option => setFormData(prev => ({ ...prev, location: option ? option.value : '' }))}
+              options={locations.map(location => ({
+                value: location.locationName,
+                label: location.locationName
+              }))}
+              isClearable
+              isSearchable
+              placeholder={loadingLocations ? 'Loading locations...' : 'Select location'}
+              isLoading={loadingLocations}
+              classNamePrefix="react-select"
+            />
             {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
           </div>
 
@@ -424,19 +446,15 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Booked By
             </label>
-            <select
-              value={formData.bookedBy}
-              onChange={(e) => setFormData(prev => ({ ...prev, bookedBy: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.bookedBy ? 'border-red-500' : 'border-gray-300'
-              }`}
-            >
-              <option value="">Select booking method</option>
-              <option value="phone">Phone</option>
-              <option value="online">Online</option>
-              <option value="face-to-face">Face to Face</option>
-              <option value="invoice">Invoice</option>
-            </select>
+            <Select
+              value={formData.bookedBy ? { value: formData.bookedBy, label: formData.bookedBy.charAt(0).toUpperCase() + formData.bookedBy.slice(1) } : null}
+              onChange={option => setFormData(prev => ({ ...prev, bookedBy: option ? option.value : '' }))}
+              options={["phone", "online", "face-to-face", "invoice"].map(method => ({ value: method, label: method.charAt(0).toUpperCase() + method.slice(1) }))}
+              isClearable
+              isSearchable
+              placeholder="Select booking method"
+              classNamePrefix="react-select"
+            />
             {errors.bookedBy && <p className="text-red-500 text-sm mt-1">{errors.bookedBy}</p>}
           </div>
 
@@ -444,18 +462,19 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Course Type
             </label>
-            <select
-              value={formData.courseType}
-              onChange={(e) => setFormData(prev => ({ ...prev, courseType: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.courseType ? 'border-red-500' : 'border-gray-300'
-              }`}
-            >
-              <option value="">Select course type</option>
-              <option value="class-based">Class Based</option>
-              <option value="online-distance">Online/Distance Learning</option>
-              <option value="blended">Blended Learning</option>
-            </select>
+            <Select
+              value={formData.courseType ? { value: formData.courseType, label: formData.courseType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) } : null}
+              onChange={option => setFormData(prev => ({ ...prev, courseType: option ? option.value : '' }))}
+              options={[
+                { value: 'class-based', label: 'Class Based' },
+                { value: 'online-distance', label: 'Online/Distance Learning' },
+                { value: 'blended', label: 'Blended Learning' }
+              ]}
+              isClearable
+              isSearchable
+              placeholder="Select course type"
+              classNamePrefix="react-select"
+            />
             {errors.courseType && <p className="text-red-500 text-sm mt-1">{errors.courseType}</p>}
           </div>
 
@@ -463,14 +482,15 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Assignment Status
             </label>
-            <select
-              value={formData.assignmentStatus}
-              onChange={(e) => setFormData(prev => ({ ...prev, assignmentStatus: e.target.value as 'pending' | 'complete' }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="pending">Pending</option>
-              <option value="complete">Complete</option>
-            </select>
+            <Select
+              value={formData.assignmentStatus ? { value: formData.assignmentStatus, label: formData.assignmentStatus.charAt(0).toUpperCase() + formData.assignmentStatus.slice(1) } : null}
+              onChange={option => setFormData(prev => ({ ...prev, assignmentStatus: option ? option.value as 'pending' | 'complete' : 'pending' }))}
+              options={['pending', 'complete'].map(status => ({ value: status, label: status.charAt(0).toUpperCase() + status.slice(1) }))}
+              isClearable
+              isSearchable
+              placeholder="Select assignment status"
+              classNamePrefix="react-select"
+            />
           </div>
 
           <div>
@@ -482,6 +502,28 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
               value={formData.assignmentDate}
               onChange={(e) => setFormData(prev => ({ ...prev, assignmentDate: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Assign Employee
+            </label>
+            <Select
+              value={employees.find(e => (e.id || e._id) === formData.employeeId) ? {
+                value: formData.employeeId,
+                label: `${employees.find(e => (e.id || e._id) === formData.employeeId)?.fullName} (${employees.find(e => (e.id || e._id) === formData.employeeId)?.position})`
+              } : null}
+              onChange={option => setFormData(prev => ({ ...prev, employeeId: option ? option.value : '' }))}
+              options={employees.map(emp => ({
+                value: emp.id || emp._id,
+                label: `${emp.fullName} (${emp.position})`
+              }))}
+              isClearable
+              isSearchable
+              placeholder={loadingEmployees ? 'Loading employees...' : 'Select employee'}
+              isLoading={loadingEmployees}
+              classNamePrefix="react-select"
             />
           </div>
         </div>
@@ -508,17 +550,18 @@ export default function StudentAdmissionForm({ onSubmit, onCancel, initialData }
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Admission Type
             </label>
-            <select
-              value={formData.admissionType}
-              onChange={(e) => setFormData(prev => ({ ...prev, admissionType: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.admissionType ? 'border-red-500' : 'border-gray-300'
-              }`}
-            >
-              <option value="">Select admission type</option>
-              <option value="general">General</option>
-              <option value="price-plan">Price Plan</option>
-            </select>
+            <Select
+              value={formData.admissionType ? { value: formData.admissionType, label: formData.admissionType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) } : null}
+              onChange={option => setFormData(prev => ({ ...prev, admissionType: option ? option.value : '' }))}
+              options={[
+                { value: 'general', label: 'General' },
+                { value: 'price-plan', label: 'Price Plan' }
+              ]}
+              isClearable
+              isSearchable
+              placeholder="Select admission type"
+              classNamePrefix="react-select"
+            />
             {errors.admissionType && <p className="text-red-500 text-sm mt-1">{errors.admissionType}</p>}
           </div>
 

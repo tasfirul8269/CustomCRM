@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Button from '../ui/Button';
 import { Certificate } from '../../types/certificate';
 import api from '../../services/api';
+import Select from 'react-select';
 
 interface Course {
   _id: string;
@@ -157,40 +158,22 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Student
           </label>
-          <input
-            ref={studentInputRef}
-            type="text"
-            value={studentQuery}
-            onChange={e => {
-              setStudentQuery(e.target.value);
-              setShowStudentSuggestions(true);
-              setFormData(prev => ({ ...prev, student: '' }));
-            }}
-            onFocus={() => setShowStudentSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowStudentSuggestions(false), 100)}
-            placeholder="Type to search student..."
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.student ? 'border-red-500' : 'border-gray-300'}`}
+          <Select
+            value={students.find(s => s._id === formData.student) ? {
+              value: formData.student,
+              label: students.find(s => s._id === formData.student)?.name
+            } : null}
+            onChange={option => setFormData(prev => ({ ...prev, student: option ? option.value : '' }))}
+            options={students.map(student => ({
+              value: student._id,
+              label: student.name
+            }))}
+            isClearable
+            isSearchable
+            placeholder={loading ? 'Loading students...' : 'Select student'}
+            isLoading={loading}
+            classNamePrefix="react-select"
           />
-          {showStudentSuggestions && studentQuery && (
-            <ul className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-1 w-full max-h-48 overflow-y-auto shadow-lg">
-              {filteredStudentSuggestions.length === 0 && (
-                <li className="px-3 py-2 text-gray-500">No students found</li>
-              )}
-              {filteredStudentSuggestions.map(student => (
-                <li
-                  key={student._id}
-                  className="px-3 py-2 cursor-pointer hover:bg-blue-100"
-                  onMouseDown={() => {
-                    setFormData(prev => ({ ...prev, student: student._id }));
-                    setStudentQuery(student.name);
-                    setShowStudentSuggestions(false);
-                  }}
-                >
-                  {student.name}
-                </li>
-              ))}
-            </ul>
-          )}
           {errors.student && <p className="text-red-500 text-sm mt-1">{errors.student}</p>}
         </div>
         {/* Course Autocomplete */}
@@ -198,40 +181,22 @@ export default function CertificateForm({ onSubmit, onCancel, initialData }: Cer
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Course
           </label>
-          <input
-            ref={courseInputRef}
-            type="text"
-            value={courseQuery}
-            onChange={e => {
-              setCourseQuery(e.target.value);
-              setShowCourseSuggestions(true);
-              setFormData(prev => ({ ...prev, course: '' }));
-            }}
-            onFocus={() => setShowCourseSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowCourseSuggestions(false), 100)}
-            placeholder="Type to search course..."
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.course ? 'border-red-500' : 'border-gray-300'}`}
+          <Select
+            value={courses.find(c => c._id === formData.course) ? {
+              value: formData.course,
+              label: courses.find(c => c._id === formData.course)?.title
+            } : null}
+            onChange={option => setFormData(prev => ({ ...prev, course: option ? option.value : '' }))}
+            options={courses.map(course => ({
+              value: course._id,
+              label: course.title
+            }))}
+            isClearable
+            isSearchable
+            placeholder={loading ? 'Loading courses...' : 'Select course'}
+            isLoading={loading}
+            classNamePrefix="react-select"
           />
-          {showCourseSuggestions && courseQuery && (
-            <ul className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-1 w-full max-h-48 overflow-y-auto shadow-lg">
-              {filteredCourseSuggestions.length === 0 && (
-                <li className="px-3 py-2 text-gray-500">No courses found</li>
-              )}
-              {filteredCourseSuggestions.map(course => (
-                <li
-                  key={course._id}
-                  className="px-3 py-2 cursor-pointer hover:bg-blue-100"
-                  onMouseDown={() => {
-                    setFormData(prev => ({ ...prev, course: course._id }));
-                    setCourseQuery(course.title);
-                    setShowCourseSuggestions(false);
-                  }}
-                >
-                  {course.title}
-                </li>
-              ))}
-            </ul>
-          )}
           {errors.course && <p className="text-red-500 text-sm mt-1">{errors.course}</p>}
         </div>
 

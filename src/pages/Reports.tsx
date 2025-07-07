@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Search, Download, Users, Filter, Calendar, Building, MapPin, Phone, PoundSterling, Printer, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
+import { Search, Download, Users, Filter, Calendar, Building, MapPin, Phone, PoundSterling, Printer, Calendar as CalendarIcon, BookOpen, RefreshCw, Monitor } from 'lucide-react';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Modal from '../components/ui/Modal';
+import Select from 'react-select';
 
 interface Student {
   _id: string;
@@ -18,6 +19,9 @@ interface Student {
   balanceDue: number;
   batchNo: string;
   courses?: string[];
+  refund: number;
+  microtech: { status: string };
+  resit: { status: string };
 }
 
 interface Batch {
@@ -25,6 +29,8 @@ interface Batch {
   batchNo: string;
   subjectCourse: string;
   status: string;
+  startingDate: string;
+  endingDate: string;
 }
 
 interface Vendor {
@@ -121,13 +127,23 @@ export default function Reports() {
   const totalStudents = filteredStudents.length;
   const totalPaid = filteredStudents.reduce((sum, student) => sum + (student.totalPaid || 0), 0);
   const totalBalance = filteredStudents.reduce((sum, student) => sum + (student.balanceDue || 0), 0);
+  const totalRefund = filteredStudents.reduce((sum, student) => sum + (student.refund || 0), 0);
+
+  const getBatchLabel = (batchNo: string) => {
+    const batch = batches.find(b => b.batchNo === batchNo);
+    if (!batch) return batchNo;
+    const start = new Date(batch.startingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' });
+    const end = new Date(batch.endingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' });
+    return `${batch.batchNo} : ${start} - ${end}`;
+  };
 
   const handleExport = () => {
     // Create CSV data
     const csvData = [
-      ['Student Name', 'Contact Number', 'Vendor Name', 'Location', 'Admission Date', 'Paid', 'Balance'],
+      ['Student Name', 'Batch', 'Contact Number', 'Vendor Name', 'Location', 'Admission Date', 'Paid', 'Balance'],
       ...filteredStudents.map(student => [
         student.name,
+        getBatchLabel(student.batchNo),
         student.phone || '',
         student.vendor || '',
         student.location || '',
@@ -155,120 +171,143 @@ export default function Reports() {
   const handlePrint = () => {
     // Create new PDF document
     const doc = new jsPDF();
-    
-    // Add title
-    doc.setFontSize(20);
+
+    // Modern Header
+    doc.setFillColor(59, 130, 246); // Tailwind blue-600
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 30, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.text('Student Report', 105, 20, { align: 'center' });
-    
-    // Add subtitle with date
+    doc.setFontSize(22);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Student Report', doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 105, 30, { align: 'center' });
-    
-    // Add filter information
-    doc.setFontSize(14);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, doc.internal.pageSize.getWidth() / 2, 26, { align: 'center' });
+
+    // Section: Filters
+    let yPosition = 38;
     doc.setFont('helvetica', 'bold');
-    doc.text('Applied Filters:', 20, 45);
-    
-    doc.setFontSize(10);
+    doc.setFontSize(13);
+    doc.setTextColor(59, 130, 246); // Tailwind blue-600
+    doc.text('Applied Filters', 14, yPosition);
+    yPosition += 6;
     doc.setFont('helvetica', 'normal');
-    let yPosition = 55;
-    
+    doc.setFontSize(10);
+    doc.setTextColor(55, 65, 81); // Tailwind gray-700
     if (selectedBatch !== 'All Batches') {
-      doc.text(`• Batch: ${selectedBatch}`, 25, yPosition);
-      yPosition += 7;
+      doc.text(`• Batch: ${getBatchLabel(selectedBatch)}`, 18, yPosition);
+      yPosition += 5;
     }
-    
     if (selectedVendor !== 'All Vendors') {
-      doc.text(`• Vendor: ${selectedVendor}`, 25, yPosition);
-      yPosition += 7;
+      doc.text(`• Vendor: ${selectedVendor}`, 18, yPosition);
+      yPosition += 5;
     }
-    
     if (selectedCourse !== 'All Courses') {
-      doc.text(`• Course: ${selectedCourse}`, 25, yPosition);
-      yPosition += 7;
+      doc.text(`• Course: ${selectedCourse}`, 18, yPosition);
+      yPosition += 5;
     }
-    
     if (dateFrom || dateTo) {
-      doc.text(`• Admission Date Range: ${dateFrom ? `From: ${dateFrom}` : ''} ${dateTo ? `To: ${dateTo}` : ''}`, 25, yPosition);
-      yPosition += 7;
+      doc.text(`• Admission Date Range: ${dateFrom ? `From: ${dateFrom}` : ''} ${dateTo ? `To: ${dateTo}` : ''}`, 18, yPosition);
+      yPosition += 5;
     }
-    
     if (searchTerm) {
-      doc.text(`• Search: "${searchTerm}"`, 25, yPosition);
-      yPosition += 7;
+      doc.text(`• Search: "${searchTerm}"`, 18, yPosition);
+      yPosition += 5;
     }
-    
     if (selectedBatch === 'All Batches' && selectedVendor === 'All Vendors' && selectedCourse === 'All Courses' && !dateFrom && !dateTo && !searchTerm) {
-      doc.text('• No filters applied (showing all students)', 25, yPosition);
-      yPosition += 7;
+      doc.text('• No filters applied (showing all students)', 18, yPosition);
+      yPosition += 5;
     }
-    
-    // Add summary statistics
-    yPosition += 5;
-    doc.setFontSize(12);
+
+    // Section Divider
+    yPosition += 2;
+    doc.setDrawColor(229, 231, 235); // Tailwind gray-200
+    doc.setLineWidth(0.5);
+    doc.line(14, yPosition, doc.internal.pageSize.getWidth() - 14, yPosition);
+    yPosition += 6;
+
+    // Section: Summary
     doc.setFont('helvetica', 'bold');
-    doc.text('Summary:', 20, yPosition);
-    
-    doc.setFontSize(10);
+    doc.setFontSize(13);
+    doc.setTextColor(16, 185, 129); // Tailwind green-500
+    doc.text('Summary', 14, yPosition);
+    yPosition += 6;
     doc.setFont('helvetica', 'normal');
-    yPosition += 7;
-    doc.text(`• Total Students: ${totalStudents}`, 25, yPosition);
-    yPosition += 7;
-    doc.text(`• Total Paid: £${totalPaid.toLocaleString()}`, 25, yPosition);
-    yPosition += 7;
-    doc.text(`• Total Balance: £${totalBalance.toLocaleString()}`, 25, yPosition);
-    
-    // Prepare table data
+    doc.setFontSize(10);
+    doc.setTextColor(55, 65, 81); // Tailwind gray-700
+    doc.text(`• Total Students: ${totalStudents}`, 18, yPosition);
+    yPosition += 5;
+    doc.text(`• Total Paid: £${totalPaid.toLocaleString()}`, 18, yPosition);
+    yPosition += 5;
+    doc.text(`• Total Balance: £${totalBalance.toLocaleString()}`, 18, yPosition);
+    yPosition += 2;
+    doc.setDrawColor(229, 231, 235);
+    doc.setLineWidth(0.5);
+    doc.line(14, yPosition, doc.internal.pageSize.getWidth() - 14, yPosition);
+    yPosition += 8;
+
+    // Table
     const tableData = filteredStudents.map(student => [
       student.name,
+      getBatchLabel(student.batchNo),
       student.phone || 'N/A',
       student.vendor || 'N/A',
       student.location || 'N/A',
       new Date(student.enrollmentDate).toLocaleDateString(),
       `£${(student.totalPaid || 0).toLocaleString()}`,
       `£${(student.balanceDue || 0).toLocaleString()}`,
+      `${(student.microtech && student.microtech.status === 'yes' ? 'M' : '')}${(student.resit && student.resit.status === 'yes' ? 'R' : '')}`
     ]);
-    
-    // Add table
+
     autoTable(doc, {
-      head: [['Student Name', 'Contact Number', 'Vendor Name', 'Location', 'Admission Date', 'Paid', 'Balance']],
+      head: [['Student Name', 'Batch', 'Contact Number', 'Vendor Name', 'Location', 'Admission Date', 'Paid', 'Balance', 'M/R']],
       body: tableData,
-      startY: yPosition + 10,
+      startY: yPosition,
       styles: {
+        font: 'helvetica',
         fontSize: 8,
         cellPadding: 2,
+        overflow: 'linebreak',
+        valign: 'middle',
+        textColor: [31, 41, 55], // Tailwind gray-800
       },
       headStyles: {
-        fillColor: [59, 130, 246], // Blue color
+        fillColor: [59, 130, 246], // Blue
         textColor: 255,
         fontStyle: 'bold',
+        fontSize: 9,
+        halign: 'center',
+        lineWidth: 0,
       },
       alternateRowStyles: {
-        fillColor: [248, 250, 252], // Light gray
+        fillColor: [243, 244, 246], // Tailwind gray-100
       },
-      columnStyles: {
-        0: { cellWidth: 35 }, // Student Name
-        1: { cellWidth: 25 }, // Contact Number
-        2: { cellWidth: 30 }, // Vendor Name
-        3: { cellWidth: 25 }, // Location
-        4: { cellWidth: 25 }, // Admission Date
-        5: { cellWidth: 20 }, // Paid
-        6: { cellWidth: 20 }, // Balance
+      tableLineColor: [229, 231, 235],
+      tableLineWidth: 0.5,
+      tableWidth: 'auto',
+      margin: { left: 6, right: 6, top: 10 },
+      didParseCell: function (data) {
+        if (data.section === 'body') {
+          const studentIdx = data.row.index;
+          const student = filteredStudents[studentIdx];
+          if (student && student.refund > 0) {
+            data.cell.styles.fillColor = [255, 199, 206]; // Light red background
+            data.cell.styles.lineColor = [239, 68, 68]; // Red border
+            data.cell.styles.lineWidth = 0.5;
+          }
+        }
       },
-      margin: { top: 10 },
     });
-    
-    // Add footer
+
+    // Footer with branding
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Page ${i} of ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(156, 163, 175); // Tailwind gray-400
+      doc.text('Generated by CustomCRM', 14, doc.internal.pageSize.height - 8);
+      doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.height - 8, { align: 'right' });
     }
-    
+
     // Save the PDF
     doc.save(`student-report-${new Date().toISOString().split('T')[0]}.pdf`);
   };
@@ -309,7 +348,7 @@ export default function Reports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -323,7 +362,6 @@ export default function Reports() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -337,7 +375,6 @@ export default function Reports() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -347,6 +384,19 @@ export default function Reports() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Balance</p>
                 <p className="text-2xl font-bold text-gray-900">£{totalBalance.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <PoundSterling className="h-6 w-6 text-yellow-500" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Refund</p>
+                <p className="text-2xl font-bold text-gray-900">£{totalRefund.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -375,20 +425,29 @@ export default function Reports() {
               />
             </div>
             {/* Batch Filter */}
-            <div className="relative flex-1 min-w-[180px]">
+            <div className="relative flex-1 min-w-[220px]">
               <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <select
-                value={selectedBatch}
-                onChange={(e) => setSelectedBatch(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full min-w-0 appearance-none bg-white"
-              >
-                <option>All Batches</option>
-                {batches.map(batch => (
-                  <option key={batch._id} value={batch.batchNo}>
-                    {batch.batchNo} - {batch.subjectCourse}
-                  </option>
-                ))}
-              </select>
+              <Select
+                value={selectedBatch === 'All Batches' ? { value: 'All Batches', label: 'All Batches' } : batches.find(b => b.batchNo === selectedBatch) ? {
+                  value: selectedBatch,
+                  label: `${batches.find(b => b.batchNo === selectedBatch)?.batchNo} : ${new Date(batches.find(b => b.batchNo === selectedBatch)?.startingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batches.find(b => b.batchNo === selectedBatch)?.endingDate || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+                } : null}
+                onChange={option => setSelectedBatch(option ? option.value : 'All Batches')}
+                options={[
+                  { value: 'All Batches', label: 'All Batches' },
+                  ...batches.map(batch => ({
+                    value: batch.batchNo,
+                    label: `${batch.batchNo} : ${new Date(batch.startingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(batch.endingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+                  }))
+                ]}
+                isClearable={false}
+                isSearchable
+                placeholder="All Batches"
+                classNamePrefix="react-select"
+                menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                menuPosition="fixed"
+                menuShouldBlockScroll={true}
+              />
             </div>
             {/* Vendor Filter */}
             <div className="relative flex-1 min-w-[180px]">
@@ -407,18 +466,26 @@ export default function Reports() {
               </select>
             </div>
             {/* Course Filter */}
-            <div className="relative flex-1 min-w-[180px]">
+            <div className="relative flex-1 min-w-[220px]">
               <BookOpen className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <select
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full min-w-0 appearance-none bg-white"
-              >
-                <option>All Courses</option>
-                {courses.map(course => (
-                  <option key={course.id} value={course.title}>{course.title}</option>
-                ))}
-              </select>
+              <Select
+                value={selectedCourse === 'All Courses' ? { value: 'All Courses', label: 'All Courses' } : courses.find(c => c.title === selectedCourse) ? {
+                  value: selectedCourse,
+                  label: courses.find(c => c.title === selectedCourse)?.title
+                } : null}
+                onChange={option => setSelectedCourse(option ? option.value : 'All Courses')}
+                options={[
+                  { value: 'All Courses', label: 'All Courses' },
+                  ...courses.map(course => ({ value: course.title, label: course.title }))
+                ]}
+                isClearable={false}
+                isSearchable
+                placeholder="All Courses"
+                classNamePrefix="react-select"
+                menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                menuPosition="fixed"
+                menuShouldBlockScroll={true}
+              />
             </div>
             {/* Date Range Picker Button */}
             <div className="flex-1 min-w-[180px]">
@@ -444,7 +511,7 @@ export default function Reports() {
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-700">
                 <strong>Active Filters:</strong>
-                {selectedBatch !== 'All Batches' && ` Batch: ${selectedBatch}`}
+                {selectedBatch !== 'All Batches' && ` Batch: ${getBatchLabel(selectedBatch)}`}
                 {selectedVendor !== 'All Vendors' && ` Vendor: ${selectedVendor}`}
                 {selectedCourse !== 'All Courses' && ` Course: ${selectedCourse}`}
                 {dateFrom && ` From: ${dateFrom}`}
@@ -515,6 +582,9 @@ export default function Reports() {
                     Student Name
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Batch
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Contact Number
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -532,12 +602,15 @@ export default function Reports() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Balance
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                    M/R
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center">
                         <Users className="h-12 w-12 text-gray-300 mb-4" />
                         <p className="text-lg font-medium">No students found</p>
@@ -546,44 +619,64 @@ export default function Reports() {
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((student) => (
-                    <tr key={student._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-900">
-                          <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                          {student.phone || 'N/A'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-900">
-                          <Building className="h-4 w-4 mr-2 text-gray-400" />
-                          {student.vendor || 'N/A'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-900">
-                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                          {student.location || 'N/A'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(student.enrollmentDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-green-600">
-                          £{(student.totalPaid || 0).toLocaleString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-red-600">
-                          £{(student.balanceDue || 0).toLocaleString()}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filteredStudents.map((student) => {
+                    const hasRefund = student.refund > 0;
+                    const hasMicro = student.microtech && student.microtech.status === 'yes';
+                    const hasResit = student.resit && student.resit.status === 'yes';
+                    return (
+                      <tr
+                        key={student._id}
+                        className={`hover:bg-gray-50${hasRefund ? ' border-2 border-red-500' : ''}`}
+                        style={hasRefund ? { border: '2px solid #ef4444' } : {}}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{getBatchLabel(student.batchNo)}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-900">
+                            <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                            {student.phone || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-900">
+                            <Building className="h-4 w-4 mr-2 text-gray-400" />
+                            {student.vendor || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-900">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                            {student.location || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(student.enrollmentDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-green-600">
+                            £{(student.totalPaid || 0).toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-red-600">
+                            £{(student.balanceDue || 0).toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {hasMicro && (
+                            <span className="inline-block bg-blue-100 text-blue-700 font-bold rounded px-2 py-0.5 text-xs mr-1 border border-blue-400" title="Micro Teaching">M</span>
+                          )}
+                          {hasResit && (
+                            <span className="inline-block bg-purple-100 text-purple-700 font-bold rounded px-2 py-0.5 text-xs border border-purple-400" title="Retake/Resit">R</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
