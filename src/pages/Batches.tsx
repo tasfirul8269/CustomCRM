@@ -238,11 +238,11 @@ export default function Batches() {
                     <Edit className="h-4 w-4" />
                   </button>
                 <button
-                  onClick={() => handleDeleteBatch(batch.id)}
+                  onClick={() => handleDeleteBatch(batch.id || (batch as any)._id)}
                   className="text-red-600 hover:text-red-900"
                 >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </Card>

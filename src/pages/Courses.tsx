@@ -97,7 +97,7 @@ export default function Courses() {
           assignmentDuration: courseData.assignmentDuration,
           status: courseData.published ? 'active' : 'inactive'
         };
-        await api.patch(`/courses/${editingCourse.id}`, mappedData);
+        await api.patch(`/courses/${editingCourse.id || (editingCourse as any)._id}`, mappedData);
         setMessage('Course updated successfully!');
         fetchCourses(); // Refresh the list
         setIsModalOpen(false);
@@ -320,7 +320,7 @@ export default function Courses() {
       {/* Courses Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCourses.map((course, index) => (
-          <Card key={course.id || `course-${index}`} className="hover:shadow-lg transition-shadow duration-200">
+          <Card key={course.id || (course as any)._id || `course-${index}`} className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -339,7 +339,7 @@ export default function Courses() {
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleDeleteCourse(course.id)}
+                    onClick={() => handleDeleteCourse(course.id || (course as any)._id)}
                     className="text-red-600 hover:text-red-900"
                   >
                     <Trash2 className="h-4 w-4" />
