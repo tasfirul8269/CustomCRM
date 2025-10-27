@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Plus, Search, Filter, Edit, Trash2, ChevronDown, Mail, Phone, MapPin, Building, Calendar, FileText, PoundSterling, User, Globe, CreditCard } from 'lucide-react';
@@ -6,8 +6,15 @@ import Modal from '../components/ui/Modal';
 import VendorForm from '../components/forms/VendorForm';
 import { Vendor } from '../types/vendor';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Vendors() {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error('AuthContext must be used within an AuthProvider');
+  }
+  const { hasPermission } = authContext;
+
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -180,10 +187,12 @@ export default function Vendors() {
           <h1 className="text-3xl font-bold text-gray-900">Vendors</h1>
           <p className="text-gray-600 mt-2">Manage your vendors and their information</p>
         </div>
-        <Button onClick={() => openModal()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Vendor
-        </Button>
+        {hasPermission('vendors', 'write') && (
+          <Button onClick={() => openModal()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Vendor
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -357,24 +366,28 @@ export default function Vendors() {
                     {new Date(vendor.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      className="text-blue-600 hover:text-blue-900 mr-4" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openModal(vendor);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button 
-                      className="text-red-600 hover:text-red-900" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteVendor(vendor.id || (vendor as any)._id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {hasPermission('vendors', 'write') && (
+                      <>
+                        <button 
+                          className="text-blue-600 hover:text-blue-900 mr-4" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModal(vendor);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button 
+                          className="text-red-600 hover:text-red-900" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVendor(vendor.id || (vendor as any)._id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

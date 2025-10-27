@@ -37,11 +37,7 @@ export default function Sidebar() {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
 
-  const { user, logout } = authContext;
-
-  // Debug logging
-  console.log('Sidebar - User:', user);
-  console.log('Sidebar - User permissions:', user?.permissions);
+  const { user, logout, hasPermission } = authContext;
 
   const handleLogout = () => {
     logout();
@@ -51,12 +47,8 @@ export default function Sidebar() {
   const filteredNavigation = navigation.filter(item => {
     if (!item.permission) return true; // Always show items without permission requirement
     if (user?.role === 'admin') return true; // Admin can see everything
-    const hasPermission = user?.permissions?.includes(item.permission);
-    console.log(`Checking permission for ${item.name}: ${item.permission} - ${hasPermission}`);
-    return hasPermission;
+    return hasPermission(item.permission, 'read');
   });
-
-  console.log('Filtered navigation:', filteredNavigation);
 
   return (
     <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200">

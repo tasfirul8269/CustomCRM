@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import CourseForm from '../components/forms/CourseForm';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -6,8 +6,15 @@ import Modal from '../components/ui/Modal';
 import { Course } from '../types';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Users, Clock, ChevronDown } from 'lucide-react';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Courses() {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error('AuthContext must be used within an AuthProvider');
+  }
+  const { hasPermission } = authContext;
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -163,10 +170,12 @@ export default function Courses() {
           <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
           <p className="text-gray-600 mt-2">Manage your course catalog and track enrollments</p>
         </div>
-        <Button onClick={() => openModal()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Course
-        </Button>
+        {hasPermission('courses', 'write') && (
+          <Button onClick={() => openModal()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Course
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -332,18 +341,22 @@ export default function Courses() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => openModal(course)}
-                    className="text-blue-600 hover:text-blue-900"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCourse(course.id || (course as any)._id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {hasPermission('courses', 'write') && (
+                    <>
+                      <button
+                        onClick={() => openModal(course)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCourse(course.id || (course as any)._id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </CardHeader>

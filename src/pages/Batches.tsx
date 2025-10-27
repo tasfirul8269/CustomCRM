@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -6,8 +6,15 @@ import { Plus, Search, Filter, Edit, Trash2, Calendar, Users, Clock } from 'luci
 import BatchForm from '../components/forms/BatchForm';
 import { Batch } from '../types/batch';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Batches() {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error('AuthContext must be used within an AuthProvider');
+  }
+  const { hasPermission } = authContext;
+
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
@@ -159,10 +166,12 @@ export default function Batches() {
           <h1 className="text-3xl font-bold text-gray-900">Batches</h1>
           <p className="text-gray-600 mt-2">Manage your training batches and schedules</p>
         </div>
-        <Button onClick={() => openModal()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Batch
-        </Button>
+        {hasPermission('batches', 'write') && (
+          <Button onClick={() => openModal()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Batch
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -230,20 +239,22 @@ export default function Batches() {
                 </div>
               </div>
 
-              <div className="mt-4 flex justify-end space-x-2">
-                <button
-                  onClick={() => openModal(batch)}
-                  className="text-blue-600 hover:text-blue-900"
-                >
-                    <Edit className="h-4 w-4" />
+              {hasPermission('batches', 'write') && (
+                <div className="mt-4 flex justify-end space-x-2">
+                  <button
+                    onClick={() => openModal(batch)}
+                    className="text-blue-600 hover:text-blue-900"
+                  >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  <button
+                    onClick={() => handleDeleteBatch(batch.id || (batch as any)._id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
-                <button
-                  onClick={() => handleDeleteBatch(batch.id || (batch as any)._id)}
-                  className="text-red-600 hover:text-red-900"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           </Card>
         ))}

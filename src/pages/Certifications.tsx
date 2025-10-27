@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Search, Filter, Plus, Mail, Printer, MoreVertical, Check, X, Edit, Trash2 } from 'lucide-react';
@@ -6,8 +6,15 @@ import Modal from '../components/ui/Modal';
 import CertificateForm from '../components/forms/CertificateForm';
 import { Certificate } from '../types/certificate';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Certifications() {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error('AuthContext must be used within an AuthProvider');
+  }
+  const { hasPermission } = authContext;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All Status');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,10 +144,12 @@ export default function Certifications() {
           <p className="text-gray-600 mt-1">Manage and track certificate issuance and delivery</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button onClick={() => openModal()}>
-            <Plus className="h-4 w-4 mr-2" />
-            Issue Certificate
-          </Button>
+          {hasPermission('certifications', 'write') && (
+            <Button onClick={() => openModal()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Issue Certificate
+            </Button>
+          )}
         </div>
       </div>
 
@@ -239,18 +248,22 @@ export default function Certifications() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        <button 
-                          onClick={() => openModal(cert)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteCertificate(cert._id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {hasPermission('certifications', 'write') && (
+                          <>
+                            <button 
+                              onClick={() => openModal(cert)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteCertificate(cert._id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Plus, Edit, Trash2, Search, Mail, Phone, MapPin, Calendar, User, Building, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -6,8 +6,15 @@ import Modal from '../components/ui/Modal';
 import EmployeeForm from '../components/forms/EmployeeForm';
 import { Employee } from '../types/employee';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Employees() {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error('AuthContext must be used within an AuthProvider');
+  }
+  const { hasPermission } = authContext;
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -145,13 +152,15 @@ export default function Employees() {
           <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
           <p className="text-gray-600 mt-1">Manage your organization's employees</p>
         </div>
-        <Button
-          onClick={() => openModal()}
-          variant="primary"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Employee
-        </Button>
+        {hasPermission('employees', 'write') && (
+          <Button
+            onClick={() => openModal()}
+            variant="primary"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Employee
+          </Button>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -270,24 +279,28 @@ export default function Employees() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openModal(employee);
-                          }}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          <Edit className="h-4 w-4 inline" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteEmployee(employee.id || (employee as any)._id);
-                          }}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="h-4 w-4 inline" />
-                        </button>
+                        {hasPermission('employees', 'write') && (
+                          <>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openModal(employee);
+                              }}
+                              className="text-blue-600 hover:text-blue-900 mr-4"
+                            >
+                              <Edit className="h-4 w-4 inline" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEmployee(employee.id || (employee as any)._id);
+                              }}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4 inline" />
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}

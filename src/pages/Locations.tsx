@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -6,8 +6,15 @@ import LocationForm from '../components/forms/LocationForm';
 import { Location } from '../types';
 import { Plus, Search, MapPin, Settings, Eye, Edit, Trash2 } from 'lucide-react';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Locations() {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error('AuthContext must be used within an AuthProvider');
+  }
+  const { hasPermission } = authContext;
+
   const [locations, setLocations] = useState<Location[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
@@ -123,10 +130,12 @@ export default function Locations() {
           <h1 className="text-3xl font-bold text-gray-900">Locations</h1>
           <p className="text-gray-600 mt-2">Manage training centers and their facilities</p>
         </div>
-        <Button onClick={() => openModal()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Location
-        </Button>
+        {hasPermission('locations', 'write') && (
+          <Button onClick={() => openModal()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Location
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -233,18 +242,22 @@ export default function Locations() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => openModal(location)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                        <button
-                          onClick={() => handleDeleteLocation(location._id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                        {hasPermission('locations', 'write') && (
+                          <>
+                            <button
+                              onClick={() => openModal(location)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                            <button
+                              onClick={() => handleDeleteLocation(location._id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                          </>
+                        )}
                   </div>
                     </td>
                   </tr>

@@ -1,13 +1,18 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import api from '../services/api';
 
+interface Permission {
+  resource: string;
+  access: 'read' | 'write';
+}
+
 interface User {
   id: string;
   name: string;
   email: string;
   profileImage?: string;
   role: 'admin' | 'moderator';
-  permissions: string[];
+  permissions: Permission[];
 }
 
 interface AuthContextType {
@@ -17,6 +22,7 @@ interface AuthContextType {
   loading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  hasPermission: (resource: string, access?: 'read' | 'write') => boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,8 +79,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+  const hasPermission = (resource: string, access: 'read' | 'write' = 'read'): boolean => {
+    if (!user) return false;
+    
+    if (user.role === 'admin') return true;
+    
+    if (user.role === 'moderator') {
+      const permission = user.permissions.find(p => p.resource === resource);
+      if (permission) {
+        // If user has write access, they can also read
+        return permission.access === 'write' || 
+               (access === 'read' && permission.access === 'read');
+      }
+    }
+    
+    return false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, loading, login, logout, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

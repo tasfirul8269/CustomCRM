@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -8,8 +8,15 @@ import { Plus, Search, Eye, Edit, Trash2, Calendar, MapPin, Phone, Mail, PoundSt
 import api from '../services/api';
 import { Batch } from '../types/batch';
 import Select from 'react-select';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Students() {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error('AuthContext must be used within an AuthProvider');
+  }
+  const { hasPermission } = authContext;
+
   const [students, setStudents] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -256,10 +263,12 @@ export default function Students() {
           <h1 className="text-3xl font-bold text-gray-900">Students</h1>
           <p className="text-gray-600 mt-2">Manage student enrollments and track their progress</p>
         </div>
-        <Button onClick={() => openModal()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Student
-        </Button>
+        {hasPermission('students', 'write') && (
+          <Button onClick={() => openModal()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Student
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -398,44 +407,48 @@ export default function Students() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openResitModal(student);
-                          }}
-                          className="bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs border border-purple-300"
-                          title="Resit"
-                        >
-                          R
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openMicrotechModal(student);
-                          }}
-                          className="bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs border border-blue-300"
-                          title="Micro Tech"
-                        >
-                          M
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openModal(student);
-                          }}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteStudent(student.id);
-                          }}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {hasPermission('students', 'write') && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openResitModal(student);
+                              }}
+                              className="bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs border border-purple-300"
+                              title="Resit"
+                            >
+                              R
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openMicrotechModal(student);
+                              }}
+                              className="bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs border border-blue-300"
+                              title="Micro Tech"
+                            >
+                              M
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openModal(student);
+                              }}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteStudent(student.id);
+                              }}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -696,14 +709,16 @@ export default function Students() {
               <Button variant="outline" onClick={closeViewModal}>
                 Close
               </Button>
-              <Button 
-                onClick={() => {
-                  closeViewModal();
-                  openModal(viewingStudent);
-                }}
-              >
-                Edit Student
-              </Button>
+              {hasPermission('students', 'write') && (
+                <Button 
+                  onClick={() => {
+                    closeViewModal();
+                    openModal(viewingStudent);
+                  }}
+                >
+                  Edit Student
+                </Button>
+              )}
             </div>
           </div>
         )}

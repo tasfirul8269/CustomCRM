@@ -3,13 +3,18 @@ import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 import Modal from '../components/ui/Modal';
 
+interface Permission {
+  resource: string;
+  access: 'read' | 'write';
+}
+
 interface User {
   id: string;
   name: string;
   email: string;
   profileImage?: string;
   role: 'admin' | 'moderator';
-  permissions: string[];
+  permissions: Permission[];
 }
 
 interface FormData {
@@ -17,7 +22,7 @@ interface FormData {
   email: string;
   password: string;
   role: 'admin' | 'moderator';
-  permissions: string[];
+  permissions: Permission[];
   profileImage: string;
 }
 
@@ -52,13 +57,35 @@ const UserForm = ({
     'reports'
   ];
 
-  const handlePermissionChange = (permission: string) => {
-    setFormData(prev => ({
-      ...prev,
-      permissions: prev.permissions.includes(permission)
-        ? prev.permissions.filter(p => p !== permission)
-        : [...prev.permissions, permission]
-    }));
+  const handlePermissionChange = (resource: string, access: 'read' | 'write') => {
+    setFormData(prev => {
+      const existingPermission = prev.permissions.find(p => p.resource === resource);
+      
+      if (existingPermission) {
+        // If permission exists, toggle the access level
+        if (existingPermission.access === access) {
+          // Remove permission if clicking the same access level
+          return {
+            ...prev,
+            permissions: prev.permissions.filter(p => p.resource !== resource)
+          };
+        } else {
+          // Update access level
+          return {
+            ...prev,
+            permissions: prev.permissions.map(p => 
+              p.resource === resource ? { ...p, access } : p
+            )
+          };
+        }
+      } else {
+        // Add new permission
+        return {
+          ...prev,
+          permissions: [...prev.permissions, { resource, access }]
+        };
+      }
+    });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,18 +195,37 @@ const UserForm = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Permissions
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {availablePermissions.map(permission => (
-              <label key={permission} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.permissions.includes(permission)}
-                  onChange={() => handlePermissionChange(permission)}
-                  className="mr-2"
-                />
-                <span className="text-sm capitalize">{permission}</span>
-              </label>
-            ))}
+          <div className="space-y-3">
+            {availablePermissions.map(resource => {
+              const permission = formData.permissions.find(p => p.resource === resource);
+              return (
+                <div key={resource} className="border rounded-lg p-3">
+                  <div className="text-sm font-medium text-gray-900 mb-2 capitalize">
+                    {resource}
+                  </div>
+                  <div className="flex space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={permission?.access === 'read'}
+                        onChange={() => handlePermissionChange(resource, 'read')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Read</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={permission?.access === 'write'}
+                        onChange={() => handlePermissionChange(resource, 'write')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Write</span>
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -436,7 +482,7 @@ const UserManagement = () => {
                     <div className="text-sm text-gray-900">
                       {user.role === 'admin' ? 'All permissions' : (
                         user.permissions?.length > 0 
-                          ? user.permissions.join(', ')
+                          ? user.permissions.map(p => `${p.resource}(${p.access})`).join(', ')
                           : 'No permissions'
                       )}
                     </div>
