@@ -13,7 +13,7 @@ export default function Batches() {
   if (!authContext) {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
-  const { hasPermission } = authContext;
+  const { hasPermission, user } = authContext;
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -239,7 +239,7 @@ export default function Batches() {
                 </div>
               </div>
 
-              {hasPermission('batches', 'write') && (
+              {user?.role === 'admin' && (
                 <div className="mt-4 flex justify-end space-x-2">
                   <button
                     onClick={() => openModal(batch)}

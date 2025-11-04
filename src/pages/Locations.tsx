@@ -13,7 +13,7 @@ export default function Locations() {
   if (!authContext) {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
-  const { hasPermission } = authContext;
+  const { hasPermission, user } = authContext;
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -242,7 +242,7 @@ export default function Locations() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        {hasPermission('locations', 'write') && (
+                        {user?.role === 'admin' && (
                           <>
                             <button
                               onClick={() => openModal(location)}

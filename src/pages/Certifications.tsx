@@ -13,7 +13,7 @@ export default function Certifications() {
   if (!authContext) {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
-  const { hasPermission } = authContext;
+  const { hasPermission, user } = authContext;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All Status');
@@ -248,7 +248,7 @@ export default function Certifications() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        {hasPermission('certifications', 'write') && (
+                        {user?.role === 'admin' && (
                           <>
                             <button 
                               onClick={() => openModal(cert)}

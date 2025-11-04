@@ -18,7 +18,7 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: null }, // Always visible
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'dashboard' }, // Only visible with dashboard permission
   { name: 'Students', href: '/students', icon: Users, permission: 'students' },
   { name: 'Locations', href: '/locations', icon: MapPin, permission: 'locations' },
   { name: 'Vendors', href: '/vendors', icon: Truck, permission: 'vendors' },

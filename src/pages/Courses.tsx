@@ -13,7 +13,7 @@ export default function Courses() {
   if (!authContext) {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
-  const { hasPermission } = authContext;
+  const { hasPermission, user } = authContext;
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -341,7 +341,7 @@ export default function Courses() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {hasPermission('courses', 'write') && (
+                  {user?.role === 'admin' && (
                     <>
                       <button
                         onClick={() => openModal(course)}

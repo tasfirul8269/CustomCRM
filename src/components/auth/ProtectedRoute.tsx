@@ -23,6 +23,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
   // Check permissions for specific routes
   const pathToPermission: { [key: string]: string } = {
+    '/': 'dashboard',
     '/students': 'students',
     '/courses': 'courses',
     '/batches': 'batches',
@@ -33,6 +34,21 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
     '/reports': 'reports',
     '/user-management': 'admin' // Only admins can access user management
   };
+
+  // Redirect moderators to their first available section if they try to access dashboard
+  if (location.pathname === '/' && user?.role === 'moderator') {
+    const availableSections = Object.entries(pathToPermission)
+      .filter(([path, permission]) => 
+        path !== '/' && 
+        path !== '/user-management' && 
+        hasPermission(permission, 'read')
+      )
+      .map(([path]) => path);
+
+    if (availableSections.length > 0) {
+      return <Navigate to={availableSections[0]} replace />;
+    }
+  }
 
   const requiredPermission = pathToPermission[location.pathname];
   

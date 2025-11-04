@@ -13,7 +13,7 @@ export default function Employees() {
   if (!authContext) {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
-  const { hasPermission } = authContext;
+  const { hasPermission, user } = authContext;
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -279,7 +279,7 @@ export default function Employees() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {hasPermission('employees', 'write') && (
+                        {user?.role === 'admin' && (
                           <>
                             <button 
                               onClick={(e) => {
@@ -481,14 +481,16 @@ export default function Employees() {
               <Button variant="outline" onClick={closeViewModal}>
                 Close
               </Button>
-              <Button 
-                onClick={() => {
-                  closeViewModal();
-                  openModal(viewingEmployee);
-                }}
-              >
-                Edit Employee
-              </Button>
+              {user?.role === 'admin' && (
+                <Button 
+                  onClick={() => {
+                    closeViewModal();
+                    openModal(viewingEmployee);
+                  }}
+                >
+                  Edit Employee
+                </Button>
+              )}
             </div>
           </div>
         )}

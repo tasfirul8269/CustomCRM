@@ -13,7 +13,7 @@ export default function Vendors() {
   if (!authContext) {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
-  const { hasPermission } = authContext;
+  const { hasPermission, user } = authContext;
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -366,7 +366,7 @@ export default function Vendors() {
                     {new Date(vendor.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {hasPermission('vendors', 'write') && (
+                    {user?.role === 'admin' && (
                       <>
                         <button 
                           className="text-blue-600 hover:text-blue-900 mr-4" 
@@ -590,14 +590,16 @@ export default function Vendors() {
               <Button variant="outline" onClick={closeViewModal}>
                 Close
               </Button>
-              <Button 
-                onClick={() => {
-                  closeViewModal();
-                  openModal(viewingVendor);
-                }}
-              >
-                Edit Vendor
-              </Button>
+              {user?.role === 'admin' && (
+                <Button 
+                  onClick={() => {
+                    closeViewModal();
+                    openModal(viewingVendor);
+                  }}
+                >
+                  Edit Vendor
+                </Button>
+              )}
             </div>
           </div>
         )}

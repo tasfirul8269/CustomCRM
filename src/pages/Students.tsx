@@ -15,7 +15,7 @@ export default function Students() {
   if (!authContext) {
     throw new Error('AuthContext must be used within an AuthProvider');
   }
-  const { hasPermission } = authContext;
+  const { hasPermission, user } = authContext;
 
   const [students, setStudents] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -407,7 +407,7 @@ export default function Students() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div className="flex items-center justify-center space-x-2">
-                        {hasPermission('students', 'write') && (
+                        {user?.role === 'admin' && (
                           <>
                             <button
                               onClick={(e) => {
@@ -709,7 +709,7 @@ export default function Students() {
               <Button variant="outline" onClick={closeViewModal}>
                 Close
               </Button>
-              {hasPermission('students', 'write') && (
+              {user?.role === 'admin' && (
                 <Button 
                   onClick={() => {
                     closeViewModal();
